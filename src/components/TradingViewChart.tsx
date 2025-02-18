@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { ChevronDown, ChevronUp, ZoomIn, ZoomOut } from "lucide-react";
+import { createChart, ColorType } from "lightweight-charts";
 
 import type { StockPrice, WavePattern, Timeframe } from "@/lib/types";
 
@@ -21,11 +22,97 @@ interface TradingViewChartProps {
 
 const TradingViewChart = ({
   symbol = "AAPL",
-  showElliottWave = false,
+  timeframe = "1d",
+  prices = [],
+  wavePattern,
+  showElliottWave = true,
   showFibonacci = false,
   onToggleElliottWave = () => {},
   onToggleFibonacci = () => {},
 }: TradingViewChartProps) => {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!chartContainerRef.current || !prices.length) return;
+
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: "#d1d5db",
+      },
+      grid: {
+        vertLines: { color: "rgba(42, 46, 57, 0.5)" },
+        horzLines: { color: "rgba(42, 46, 57, 0.5)" },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 500,
+    });
+
+    chartRef.current = chart;
+
+    const candlestickSeries = chart.addCandlestickSeries({
+      upColor: "#22c55e",
+      downColor: "#ef4444",
+      borderVisible: false,
+      wickUpColor: "#22c55e",
+      wickDownColor: "#ef4444",
+    });
+
+    const data = prices.map((price) => ({
+      time: new Date(price.timestamp).getTime() / 1000,
+      open: price.open,
+      high: price.high,
+      low: price.low,
+      close: price.close,
+    }));
+
+    candlestickSeries.setData(data);
+
+    // Add Elliott Wave markers if enabled and pattern exists
+    if (showElliottWave && wavePattern) {
+      const markers = [
+        { price: wavePattern.wave1_start, label: "1" },
+        { price: wavePattern.wave2_start, label: "2" },
+        { price: wavePattern.wave3_start, label: "3" },
+        { price: wavePattern.wave4_start, label: "4" },
+        { price: wavePattern.wave5_start, label: "5" },
+      ];
+
+      // Add wave markers
+      markers.forEach(({ price, label }) => {
+        const series = chart.addLineSeries({
+          color: "#8b5cf6",
+          lineWidth: 2,
+          title: `Wave ${label}`,
+        });
+
+        series.setData([
+          { time: data[0].time, value: price },
+          { time: data[data.length - 1].time, value: price },
+        ]);
+      });
+    }
+
+    // Cleanup
+    return () => {
+      chart.remove();
+    };
+  }, [prices, showElliottWave, wavePattern]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartRef.current && chartContainerRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   return (
     <Card className="w-full h-[600px] bg-background p-4">
       <div className="flex justify-between items-center mb-4">
@@ -71,12 +158,10 @@ const TradingViewChart = ({
         </div>
       </div>
 
-      <div className="relative h-[calc(100%-60px)] bg-muted rounded-lg">
-        {/* Placeholder for actual TradingView chart */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-muted-foreground">TradingView Chart Integration</p>
-        </div>
-
+      <div
+        ref={chartContainerRef}
+        className="relative h-[calc(100%-60px)] bg-muted rounded-lg overflow-hidden"
+      >
         {/* Price controls */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col space-y-2">
           <Button variant="outline" size="icon">

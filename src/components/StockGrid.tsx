@@ -7,9 +7,14 @@ import type { Timeframe } from "@/lib/types";
 interface StockGridProps {
   searchQuery?: string;
   timeframe?: Timeframe;
+  onStockSelect?: (symbol: string) => void;
 }
 
-const StockGrid = ({ searchQuery = "", timeframe = "1d" }: StockGridProps) => {
+const StockGrid = ({
+  onStockSelect,
+  searchQuery = "",
+  timeframe = "1d",
+}: StockGridProps) => {
   const { stocks, loading, error } = useStocks(timeframe);
 
   const filteredStocks = React.useMemo(() => {
@@ -62,6 +67,8 @@ const StockGrid = ({ searchQuery = "", timeframe = "1d" }: StockGridProps) => {
           }
           confidence={stock.wavePattern?.confidence || 0}
           waveStatus={stock.wavePattern?.status || ""}
+          onClick={() => onStockSelect?.(stock.symbol)}
+          prices={stock.prices}
         />
       ))}
     </div>

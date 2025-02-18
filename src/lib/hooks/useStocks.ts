@@ -13,6 +13,8 @@ export function useStocks(timeframe: Timeframe) {
     const fetchStocks = async () => {
       try {
         // Fetch stocks with their latest wave patterns
+        // Fetch wave patterns and prices together
+        // First get wave patterns with stocks
         const { data: wavePatterns, error: waveError } = await supabase
           .from("wave_patterns")
           .select(
@@ -26,8 +28,30 @@ export function useStocks(timeframe: Timeframe) {
 
         if (waveError) throw waveError;
 
+        // Then get prices for each stock
+        const pricesPromises = wavePatterns.map((pattern) =>
+          supabase
+            .from("stock_prices")
+            .select("*")
+            .eq("symbol", pattern.symbol)
+            .eq("timeframe", timeframe)
+            .order("timestamp", { ascending: true })
+            .limit(100),
+        );
+
+        const pricesResults = await Promise.all(pricesPromises);
+        const stockPrices = Object.fromEntries(
+          pricesResults.map((result, index) => [
+            wavePatterns[index].symbol,
+            result.data || [],
+          ]),
+        );
+
+        if (waveError) throw waveError;
+
         // Transform the data
         const stocksWithPatterns = wavePatterns.map((pattern) => ({
+          prices: stockPrices[pattern.symbol] || [],
           symbol: pattern.symbol,
           exchange: pattern.exchange,
           name: pattern.stocks?.name || null,

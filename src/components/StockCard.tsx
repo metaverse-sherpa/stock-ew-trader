@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import { createChart, ColorType } from "lightweight-charts";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
@@ -16,6 +17,13 @@ interface StockCardProps {
   confidence?: number;
   waveStatus?: string;
   onClick?: () => void;
+  prices?: Array<{
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  }>;
 }
 
 const StockCard = ({
@@ -25,7 +33,56 @@ const StockCard = ({
   confidence = 85,
   waveStatus = "Wave 5 Bullish",
   onClick = () => {},
+  prices = [],
 }: StockCardProps) => {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!chartContainerRef.current || !prices.length) return;
+
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: "#d1d5db",
+      },
+      grid: {
+        vertLines: { visible: false },
+        horzLines: { visible: false },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 120,
+      rightPriceScale: {
+        visible: false,
+      },
+      timeScale: {
+        visible: false,
+      },
+    });
+
+    const areaSeries = chart.addAreaSeries({
+      lineColor: change >= 0 ? "#22c55e" : "#ef4444",
+      topColor:
+        change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
+      bottomColor:
+        change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
+      lineWidth: 2,
+    });
+
+    const data = prices.map((price) => ({
+      time: new Date(price.timestamp).getTime() / 1000,
+      value: price.close,
+    }));
+
+    areaSeries.setData(data);
+
+    // Cleanup
+    return () => {
+      chart.remove();
+    };
+  }, [prices, change]);
+  const handleClick = () => {
+    onClick();
+  };
   const isPositive = change >= 0;
 
   return (
@@ -76,10 +133,10 @@ const StockCard = ({
           </div>
         </div>
 
-        {/* Placeholder for mini chart */}
-        <div className="mt-4 h-[120px] bg-muted rounded-lg flex items-center justify-center">
-          <span className="text-muted-foreground">Chart Preview</span>
-        </div>
+        <div
+          className="mt-4 h-[120px] bg-muted rounded-lg overflow-hidden"
+          ref={chartContainerRef}
+        />
       </CardContent>
     </Card>
   );

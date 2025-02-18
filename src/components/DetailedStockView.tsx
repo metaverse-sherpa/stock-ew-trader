@@ -63,6 +63,8 @@ const DetailedStockView = ({
               timeframe={timeframe}
               prices={prices}
               wavePattern={wavePattern}
+              showElliottWave={true}
+              showFibonacci={false}
             />
             {wavePattern && (
               <AIPredictions
