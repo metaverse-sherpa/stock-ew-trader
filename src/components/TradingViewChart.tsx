@@ -23,7 +23,7 @@ interface TradingViewChartProps {
 
 const TradingViewChart = ({
   symbol = "AAPL",
-  timeframe, // Remove default value to ensure parent value is used
+  timeframe,
   prices = [],
   wavePattern,
   showElliottWave = true,
@@ -33,7 +33,6 @@ const TradingViewChart = ({
   onTimeframeChange = () => {},
 }: TradingViewChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
 
   useEffect(() => {
     let chart: any = null;
@@ -51,6 +50,7 @@ const TradingViewChart = ({
       timeframe,
       pricesCount: prices.length,
     });
+
     try {
       chart = createChart(chartContainerRef.current!, {
         layout: {
@@ -93,27 +93,63 @@ const TradingViewChart = ({
       chart.timeScale().fitContent();
 
       // Add Elliott Wave markers if enabled and pattern exists
-      if (showElliottWave && wavePattern) {
-        const markers = [
-          { price: wavePattern.wave1_start, label: "1" },
-          { price: wavePattern.wave2_start, label: "2" },
-          { price: wavePattern.wave3_start, label: "3" },
-          { price: wavePattern.wave4_start, label: "4" },
-          { price: wavePattern.wave5_start, label: "5" },
+      if (showElliottWave && wavePattern && data.length > 0) {
+        console.log("Drawing Elliott Wave patterns for:", {
+          timeframe,
+          wavePattern,
+        });
+
+        // Define wave points with both start and end
+        const wavePoints = [
+          {
+            start: { price: wavePattern.wave1_start, label: "1" },
+            end: { price: wavePattern.wave1_end, label: "1" },
+          },
+          {
+            start: { price: wavePattern.wave2_start, label: "2" },
+            end: { price: wavePattern.wave2_end, label: "2" },
+          },
+          {
+            start: { price: wavePattern.wave3_start, label: "3" },
+            end: { price: wavePattern.wave3_end, label: "3" },
+          },
+          {
+            start: { price: wavePattern.wave4_start, label: "4" },
+            end: { price: wavePattern.wave4_end, label: "4" },
+          },
+          {
+            start: { price: wavePattern.wave5_start, label: "5" },
+            end: { price: wavePattern.target_price1, label: "5" },
+          },
         ];
 
-        // Add wave markers
-        markers.forEach(({ price, label }) => {
+        // Calculate time points for wave distribution
+        const timePoints = [];
+        const numPoints = wavePoints.length + 1; // We need one more point than waves
+
+        for (let i = 0; i < numPoints; i++) {
+          const index = Math.min(
+            Math.floor((i / (numPoints - 1)) * (data.length - 1)),
+            data.length - 1,
+          );
+          timePoints.push(data[index].time);
+        }
+
+        // Add wave lines connecting start and end points
+        wavePoints.forEach(({ start, end }, index) => {
           const series = chart.addLineSeries({
             color: "#8b5cf6",
             lineWidth: 2,
-            title: `Wave ${label}`,
+            title: `Wave ${start.label}`,
           });
 
-          series.setData([
-            { time: data[0].time, value: price },
-            { time: data[data.length - 1].time, value: price },
-          ]);
+          // Ensure we have valid time points
+          if (timePoints[index] && timePoints[index + 1]) {
+            series.setData([
+              { time: timePoints[index], value: start.price },
+              { time: timePoints[index + 1], value: end.price },
+            ]);
+          }
         });
       }
     } catch (error) {
@@ -155,6 +191,7 @@ const TradingViewChart = ({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
   return (
     <Card className="w-full h-[600px] bg-background p-4">
       <div className="flex justify-between items-center mb-4">

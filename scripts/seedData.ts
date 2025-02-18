@@ -122,11 +122,11 @@ function aggregateCandles(candles: any[], interval: number) {
     });
   }
 
-  console.log(`Aggregation complete for interval ${interval}:`, {
-    outputCandles: aggregated.length,
-    firstAggregated: aggregated[0],
-    lastAggregated: aggregated[aggregated.length - 1],
-  });
+  //console.log(`Aggregation complete for interval ${interval}:`, {
+  //  outputCandles: aggregated.length,
+  //  firstAggregated: aggregated[0],
+  //  lastAggregated: aggregated[aggregated.length - 1],
+  //});
   return aggregated;
 }
 
@@ -239,11 +239,11 @@ async function seedData() {
 
         console.log(`Generated ${priceData.length} candles for ${timeframe}`);
 
-        console.log(`Inserting ${timeframe} data for ${symbol}:`, {
-          count: priceData.length,
-          first: priceData[0],
-          last: priceData[priceData.length - 1],
-        });
+        //console.log(`Inserting ${timeframe} data for ${symbol}:`, {
+        //  count: priceData.length,
+        //  first: priceData[0],
+        //  last: priceData[priceData.length - 1],
+        //});
 
         // Insert price data
         const { error: insertError } = await supabase
