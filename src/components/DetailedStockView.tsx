@@ -1,5 +1,10 @@
 import React from "react";
-import { Dialog, DialogContent } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 import TradingViewChart from "./TradingViewChart";
 import AIPredictions from "./AIPredictions";
 import { Badge } from "./ui/badge";
@@ -29,6 +34,13 @@ const DetailedStockView = ({
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-[90vw] w-[1512px] h-[982px] bg-background p-6">
+        <DialogTitle className="sr-only">
+          Stock Details for {symbol}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Detailed view of {symbol} stock with Elliott Wave analysis and price
+          predictions
+        </DialogDescription>
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold">{symbol}</h2>

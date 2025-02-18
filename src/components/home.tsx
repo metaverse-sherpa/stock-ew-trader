@@ -21,7 +21,11 @@ const Home = () => {
       />
 
       <main className="p-6">
-        <StockGrid searchQuery={searchQuery} timeframe={selectedTimeframe} />
+        <StockGrid
+          searchQuery={searchQuery}
+          timeframe={selectedTimeframe}
+          onStockSelect={setSelectedStock}
+        />
       </main>
 
       {selectedStock && (

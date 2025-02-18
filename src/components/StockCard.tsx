@@ -38,7 +38,7 @@ const StockCard = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !prices.length) return;
+    if (!chartContainerRef.current || !prices?.length) return;
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -57,6 +57,8 @@ const StockCard = ({
       timeScale: {
         visible: false,
       },
+      handleScroll: false,
+      handleScale: false,
     });
 
     const areaSeries = chart.addAreaSeries({
@@ -66,29 +68,43 @@ const StockCard = ({
       bottomColor:
         change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
       lineWidth: 2,
+      priceFormat: {
+        type: "price",
+        precision: 2,
+      },
     });
 
-    const data = prices.map((price) => ({
-      time: new Date(price.timestamp).getTime() / 1000,
-      value: price.close,
-    }));
+    const data = prices
+      .sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      .map((price) => ({
+        time: Math.floor(new Date(price.timestamp).getTime() / 1000),
+        value: price.close,
+      }));
 
     areaSeries.setData(data);
+
+    // Fit the chart content
+    chart.timeScale().fitContent();
 
     // Cleanup
     return () => {
       chart.remove();
     };
   }, [prices, change]);
+
   const handleClick = () => {
     onClick();
   };
+
   const isPositive = change >= 0;
 
   return (
     <Card
       className="w-[360px] h-[280px] bg-background hover:shadow-lg transition-shadow cursor-pointer"
-      onClick={onClick}
+      onClick={handleClick}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
