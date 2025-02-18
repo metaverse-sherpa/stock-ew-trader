@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl!, supabaseServiceKey);
 async function fetchStockData(symbol: string) {
   // Get data for the last 30 days
   const to = Math.floor(Date.now() / 1000);
-  const from = to - 365 * 24 * 60 * 60; // 30 days ago
+  const from = to - 365 * 24 * 60 * 60; // 365 days ago
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${from}&period2=${to}&interval=1h`;
   console.log(`Fetching from URL: ${url}`);
@@ -134,7 +134,7 @@ async function seedData() {
   try {
     console.log("Starting data seeding process...");
     const symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"];
-    const timeframes: Timeframe[] = ["1h", "4h", "1d", "1w"];
+    const timeframes: Timeframe[] = ["1h", "4h", "1d"];
 
     // Clear existing data
     console.log("Clearing existing data...");
@@ -226,8 +226,7 @@ async function seedData() {
         if (timeframe === "1h") {
           timeframeData = hourlyCandles;
         } else {
-          const interval =
-            timeframe === "4h" ? 4 : timeframe === "1d" ? 24 : 168; // 168 hours in a week
+          const interval = timeframe === "4h" ? 4 : 24; // 24 hours in a day
           timeframeData = aggregateCandles(hourlyCandles, interval);
         }
 
