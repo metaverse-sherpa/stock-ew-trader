@@ -8,39 +8,88 @@ import { supabase } from "../src/lib/supabase";
 
 console.log("Starting data seeding process...");
 
-async function fetchStockData(symbol: string) {
-  // Get data for the last 30 days
-  const to = Math.floor(Date.now() / 1000);
-  const from = to - 365 * 24 * 60 * 60; // 365 days ago
+async function generateSyntheticData(symbol: string) {
+  const now = new Date();
+  const data = [];
+  const hoursBack = 1000; // Generate 1000 hours of data
+  const basePrice = 100; // Starting price
 
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${from}&period2=${to}&interval=1h`;
-  console.log(`Fetching from URL: ${url}`);
+  // Wave parameters
+  const wave1Strength = 0.15; // 15% up
+  const wave2Strength = -0.08; // 8% down
+  const wave3Strength = 0.25; // 25% up
+  const wave4Strength = -0.05; // 5% down
+  const wave5Progress = 0.6; // Wave 5 is 60% complete
+  const wave5TargetStrength = 0.2; // 20% up target
 
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-    },
-  });
+  let currentPrice = basePrice;
+  let waveStartPrice = basePrice;
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch from Yahoo: ${response.statusText}`);
+  for (let i = 0; i < hoursBack; i++) {
+    const timestamp = new Date(
+      now.getTime() - (hoursBack - i) * 60 * 60 * 1000,
+    );
+    let priceChange = 0;
+    const progress = i / hoursBack;
+
+    // Add some random noise
+    const noise = (Math.random() - 0.5) * 0.002 * currentPrice;
+
+    // Define wave boundaries
+    const wave1End = 0.2;
+    const wave2End = 0.35;
+    const wave3End = 0.6;
+    const wave4End = 0.75;
+    // Wave 5 is in progress
+
+    if (progress < wave1End) {
+      // Wave 1 - Strong upward movement
+      priceChange = (wave1Strength / wave1End) * currentPrice * 0.01;
+    } else if (progress < wave2End) {
+      // Wave 2 - Partial retracement
+      priceChange =
+        (wave2Strength / (wave2End - wave1End)) * currentPrice * 0.01;
+    } else if (progress < wave3End) {
+      // Wave 3 - Strongest upward movement
+      priceChange =
+        (wave3Strength / (wave3End - wave2End)) * currentPrice * 0.01;
+    } else if (progress < wave4End) {
+      // Wave 4 - Shallow retracement
+      priceChange =
+        (wave4Strength / (wave4End - wave3End)) * currentPrice * 0.01;
+    } else {
+      // Wave 5 - Final upward movement (in progress)
+      const wave5StrengthSoFar = wave5TargetStrength * wave5Progress;
+      priceChange = (wave5StrengthSoFar / (1 - wave4End)) * currentPrice * 0.01;
+    }
+
+    currentPrice += priceChange + noise;
+
+    // Generate OHLC data with some randomness
+    const volatility = Math.abs(priceChange) * 2;
+    const open = currentPrice - volatility * (Math.random() - 0.5);
+    const close = currentPrice;
+    const high = Math.max(open, close) + volatility * Math.random();
+    const low = Math.min(open, close) - volatility * Math.random();
+    const volume = Math.floor(100000 + Math.random() * 900000);
+
+    data.push({
+      timestamp: Math.floor(timestamp.getTime() / 1000),
+      open,
+      high,
+      low,
+      close,
+      volume,
+    });
   }
 
-  const data = await response.json();
-  console.log("API Response received");
-
-  if (!data.chart?.result?.[0]?.timestamp) {
-    throw new Error(`Invalid API response: ${JSON.stringify(data)}`);
-  }
-
-  const result = data.chart.result[0];
   return {
-    timestamp: result.timestamp,
-    open: result.indicators.quote[0].open,
-    high: result.indicators.quote[0].high,
-    low: result.indicators.quote[0].low,
-    close: result.indicators.quote[0].close,
-    volume: result.indicators.quote[0].volume,
+    timestamp: data.map((d) => d.timestamp),
+    open: data.map((d) => d.open),
+    high: data.map((d) => d.high),
+    low: data.map((d) => d.low),
+    close: data.map((d) => d.close),
+    volume: data.map((d) => d.volume),
   };
 }
 
@@ -187,8 +236,8 @@ async function seedData() {
         continue;
       }
 
-      // Fetch hourly data
-      const data = await fetchStockData(symbol);
+      // Generate synthetic data with clear Elliott Wave patterns
+      const data = await generateSyntheticData(symbol);
 
       // Create base hourly candles
       const hourlyCandles = data.timestamp
