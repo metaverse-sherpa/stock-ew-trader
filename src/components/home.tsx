@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardHeader from "./DashboardHeader";
 import DetailedStockView from "./DetailedStockView";
 import StockGrid from "./StockGrid";
@@ -6,9 +6,16 @@ import type { Timeframe } from "@/lib/types";
 
 const Home = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1h");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log("Home component timeframe changed:", {
+      selectedTimeframe,
+      selectedStock,
+    });
+  }, [selectedTimeframe, selectedStock]);
 
   return (
     <div className="min-h-screen bg-background">

@@ -3,6 +3,7 @@ import { supabase } from "../supabase";
 import type { Stock, WavePattern, Timeframe } from "../types";
 
 export function useStocks(timeframe: Timeframe) {
+  console.log("useStocks hook called with timeframe:", timeframe);
   const [stocks, setStocks] = useState<
     (Stock & { wavePattern: WavePattern | null; prices: any[] })[]
   >([]);

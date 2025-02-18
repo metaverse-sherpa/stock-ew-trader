@@ -26,10 +26,31 @@ const DetailedStockView = ({
   symbol,
   timeframe,
 }: DetailedStockViewProps) => {
+  const [selectedTimeframe, setSelectedTimeframe] =
+    React.useState<Timeframe>(timeframe);
+
+  // Update local timeframe when prop changes
+  React.useEffect(() => {
+    setSelectedTimeframe(timeframe);
+  }, [timeframe]);
+
+  console.log("DetailedStockView rendering:", {
+    symbol,
+    timeframe: selectedTimeframe,
+  });
   const { wavePattern, prices, loading, error } = useStockDetail(
     symbol,
-    timeframe,
+    selectedTimeframe,
   );
+
+  console.log("DetailedStockView data:", {
+    symbol,
+    timeframe,
+    pricesCount: prices?.length,
+    hasWavePattern: !!wavePattern,
+    loading,
+    error,
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -72,7 +93,8 @@ const DetailedStockView = ({
           <div className="space-y-6">
             <TradingViewChart
               symbol={symbol}
-              timeframe={timeframe}
+              timeframe={selectedTimeframe}
+              onTimeframeChange={setSelectedTimeframe}
               prices={prices}
               wavePattern={wavePattern}
               showElliottWave={true}

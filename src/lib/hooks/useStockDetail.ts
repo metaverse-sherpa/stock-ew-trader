@@ -9,6 +9,7 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    console.log("useStockDetail effect running for:", { symbol, timeframe });
     const fetchStockDetail = async () => {
       try {
         // Fetch wave pattern
@@ -22,13 +23,17 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
         if (patternError) throw patternError;
 
         // Fetch historical prices
+        console.log("Fetching prices with params:", { symbol, timeframe });
         const { data: priceData, error: priceError } = await supabase
           .from("stock_prices")
-          .select()
+          .select("*")
           .eq("symbol", symbol)
           .eq("timeframe", timeframe)
-          .order("timestamp", { ascending: true })
-          .limit(1000);
+          .order("timestamp", { ascending: true });
+
+        if (!priceData?.length) {
+          console.warn("No price data found for:", { symbol, timeframe });
+        }
 
         console.log("Fetched price data:", {
           symbol,

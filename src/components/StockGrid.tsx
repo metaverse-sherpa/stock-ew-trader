@@ -13,8 +13,9 @@ interface StockGridProps {
 const StockGrid = ({
   onStockSelect,
   searchQuery = "",
-  timeframe = "1d",
+  timeframe = "1h",
 }: StockGridProps) => {
+  console.log("StockGrid rendered with timeframe:", timeframe);
   const { stocks, loading, error } = useStocks(timeframe);
 
   React.useEffect(() => {

@@ -6,12 +6,14 @@ import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Search, Moon, Sun } from "lucide-react";
 
+import type { Timeframe } from "@/lib/types";
+
 interface DashboardHeaderProps {
   onSearch?: (query: string) => void;
-  onTimeframeChange?: (timeframe: string) => void;
+  onTimeframeChange?: (timeframe: Timeframe) => void;
   onThemeToggle?: () => void;
   isDarkMode?: boolean;
-  selectedTimeframe?: string;
+  selectedTimeframe?: Timeframe;
 }
 
 const DashboardHeader = ({
@@ -19,7 +21,7 @@ const DashboardHeader = ({
   onTimeframeChange = () => {},
   onThemeToggle = () => {},
   isDarkMode = true,
-  selectedTimeframe = "1d",
+  selectedTimeframe = "1h",
 }: DashboardHeaderProps) => {
   return (
     <div className="w-full h-[72px] px-6 bg-background border-b border-border flex items-center justify-between">
@@ -34,8 +36,12 @@ const DashboardHeader = ({
         </div>
 
         <Tabs
+          defaultValue="1h"
           value={selectedTimeframe}
-          onValueChange={onTimeframeChange}
+          onValueChange={(value: Timeframe) => {
+            console.log("Timeframe selected:", value);
+            onTimeframeChange(value);
+          }}
           className="w-[300px]"
         >
           <TabsList>
