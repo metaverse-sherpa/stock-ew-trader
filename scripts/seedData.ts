@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl!, supabaseServiceKey);
 async function fetchStockData(symbol: string) {
   // Get data for the last 30 days
   const to = Math.floor(Date.now() / 1000);
-  const from = to - 30 * 24 * 60 * 60; // 30 days ago
+  const from = to - 365 * 24 * 60 * 60; // 30 days ago
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${from}&period2=${to}&interval=1h`;
   console.log(`Fetching from URL: ${url}`);

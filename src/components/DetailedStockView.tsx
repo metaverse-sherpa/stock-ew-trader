@@ -18,6 +18,7 @@ interface DetailedStockViewProps {
   onClose?: () => void;
   symbol: string;
   timeframe: Timeframe;
+  onTimeframeChange?: (timeframe: Timeframe) => void;
 }
 
 const DetailedStockView = ({
@@ -25,14 +26,10 @@ const DetailedStockView = ({
   onClose = () => {},
   symbol,
   timeframe,
+  onTimeframeChange = () => {},
 }: DetailedStockViewProps) => {
-  const [selectedTimeframe, setSelectedTimeframe] =
-    React.useState<Timeframe>(timeframe);
-
-  // Update local timeframe when prop changes
-  React.useEffect(() => {
-    setSelectedTimeframe(timeframe);
-  }, [timeframe]);
+  // Remove local state management and use prop directly
+  const selectedTimeframe = timeframe;
 
   console.log("DetailedStockView rendering:", {
     symbol,
@@ -94,7 +91,7 @@ const DetailedStockView = ({
             <TradingViewChart
               symbol={symbol}
               timeframe={selectedTimeframe}
-              onTimeframeChange={setSelectedTimeframe}
+              onTimeframeChange={onTimeframeChange}
               prices={prices}
               wavePattern={wavePattern}
               showElliottWave={true}

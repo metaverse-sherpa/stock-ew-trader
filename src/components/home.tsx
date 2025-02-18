@@ -41,6 +41,7 @@ const Home = () => {
           onClose={() => setSelectedStock(null)}
           symbol={selectedStock}
           timeframe={selectedTimeframe}
+          onTimeframeChange={setSelectedTimeframe}
         />
       )}
     </div>
