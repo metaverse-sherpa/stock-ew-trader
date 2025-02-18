@@ -39,10 +39,10 @@ const DashboardHeader = ({
           className="w-[300px]"
         >
           <TabsList>
-            <TabsTrigger value="1h">1H</TabsTrigger>
-            <TabsTrigger value="4h">4H</TabsTrigger>
-            <TabsTrigger value="1d">1D</TabsTrigger>
-            <TabsTrigger value="1w">1W</TabsTrigger>
+            <TabsTrigger value="1h">1h</TabsTrigger>
+            <TabsTrigger value="4h">4h</TabsTrigger>
+            <TabsTrigger value="1d">1d</TabsTrigger>
+            <TabsTrigger value="1w">1w</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>

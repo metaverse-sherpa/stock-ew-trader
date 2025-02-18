@@ -23,7 +23,9 @@ interface StockCardProps {
     high: number;
     low: number;
     close: number;
+    timeframe?: string;
   }>;
+  timeframe?: string;
 }
 
 const StockCard = ({
@@ -34,66 +36,88 @@ const StockCard = ({
   waveStatus = "Wave 5 Bullish",
   onClick = () => {},
   prices = [],
+  timeframe = "1d",
 }: StockCardProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !prices?.length) return;
+    if (!chartContainerRef.current || !prices?.length) {
+      console.log("Missing requirements:", {
+        hasContainer: !!chartContainerRef.current,
+        pricesLength: prices?.length,
+        timeframe: timeframe,
+        prices: prices,
+      });
+      return;
+    }
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#d1d5db",
-      },
-      grid: {
-        vertLines: { visible: false },
-        horzLines: { visible: false },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: 120,
-      rightPriceScale: {
-        visible: false,
-      },
-      timeScale: {
-        visible: false,
-      },
-      handleScroll: false,
-      handleScale: false,
-    });
+    // Add a small delay to ensure the library is loaded
+    const timer = setTimeout(() => {
+      try {
+        const chart = createChart(chartContainerRef.current!, {
+          layout: {
+            background: { type: ColorType.Solid, color: "transparent" },
+            textColor: "#d1d5db",
+          },
+          grid: {
+            vertLines: { visible: false },
+            horzLines: { visible: false },
+          },
+          width: chartContainerRef.current.clientWidth,
+          height: 120,
+          rightPriceScale: {
+            visible: false,
+          },
+          timeScale: {
+            visible: false,
+          },
+          handleScroll: false,
+          handleScale: false,
+        });
 
-    const areaSeries = chart.addAreaSeries({
-      lineColor: change >= 0 ? "#22c55e" : "#ef4444",
-      topColor:
-        change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
-      bottomColor:
-        change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
-      lineWidth: 2,
-      priceFormat: {
-        type: "price",
-        precision: 2,
-      },
-    });
+        const series = chart.addAreaSeries({
+          lineColor: change >= 0 ? "#22c55e" : "#ef4444",
+          topColor:
+            change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
+          bottomColor:
+            change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
+          lineWidth: 2,
+        });
 
-    const data = prices
-      .sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      )
-      .map((price) => ({
-        time: Math.floor(new Date(price.timestamp).getTime() / 1000),
-        value: price.close,
-      }));
+        const data = prices
+          .sort(
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          )
+          .map((price) => ({
+            time: Math.floor(new Date(price.timestamp).getTime() / 1000),
+            value: price.close,
+          }));
 
-    areaSeries.setData(data);
+        console.log("Chart data prepared:", {
+          dataPoints: data.length,
+          firstPoint: data[0],
+          lastPoint: data[data.length - 1],
+        });
 
-    // Fit the chart content
-    chart.timeScale().fitContent();
+        series.setData(data);
 
-    // Cleanup
+        // Fit the chart content
+        chart.timeScale().fitContent();
+
+        // Cleanup
+        return () => {
+          chart.remove();
+        };
+      } catch (error) {
+        console.error("Error creating chart:", error);
+      }
+    }, 100); // 100ms delay
+
     return () => {
-      chart.remove();
+      clearTimeout(timer);
     };
-  }, [prices, change]);
+  }, [prices, change, timeframe]);
 
   const handleClick = () => {
     onClick();
@@ -140,9 +164,9 @@ const StockCard = ({
               className={`flex items-center ${isPositive ? "text-green-500" : "text-red-500"}`}
             >
               {isPositive ? (
-                <ArrowUpRight className="w-5 h-5" />
+                <ArrowUpRight className="w-5 h-4" />
               ) : (
-                <ArrowDownRight className="w-5 h-5" />
+                <ArrowDownRight className="w-5 h-4" />
               )}
               <span className="font-semibold">{Math.abs(change)}%</span>
             </div>

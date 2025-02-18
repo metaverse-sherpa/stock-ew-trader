@@ -24,11 +24,18 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
         // Fetch historical prices
         const { data: priceData, error: priceError } = await supabase
           .from("stock_prices")
-          .select("*")
+          .select()
           .eq("symbol", symbol)
           .eq("timeframe", timeframe)
-          .order("timestamp", { ascending: false })
+          .order("timestamp", { ascending: true })
           .limit(1000);
+
+        console.log("Fetched price data:", {
+          symbol,
+          timeframe,
+          priceData,
+          priceError,
+        });
 
         if (priceError) throw priceError;
 

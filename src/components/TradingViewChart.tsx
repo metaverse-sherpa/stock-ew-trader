@@ -34,7 +34,15 @@ const TradingViewChart = ({
   const chartRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !prices.length) return;
+    if (!chartContainerRef.current || !prices?.length) {
+      console.log("No chart container or prices:", {
+        containerExists: !!chartContainerRef.current,
+        pricesLength: prices?.length,
+      });
+      return;
+    }
+
+    console.log("Rendering chart with prices:", prices);
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -59,15 +67,24 @@ const TradingViewChart = ({
       wickDownColor: "#ef4444",
     });
 
-    const data = prices.map((price) => ({
-      time: new Date(price.timestamp).getTime() / 1000,
-      open: price.open,
-      high: price.high,
-      low: price.low,
-      close: price.close,
-    }));
+    const data = prices
+      .sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      .map((price) => ({
+        time: Math.floor(new Date(price.timestamp).getTime() / 1000),
+        open: price.open,
+        high: price.high,
+        low: price.low,
+        close: price.close,
+      }));
 
+    console.log("Processed chart data:", data);
     candlestickSeries.setData(data);
+
+    // Fit the content
+    chart.timeScale().fitContent();
 
     // Add Elliott Wave markers if enabled and pattern exists
     if (showElliottWave && wavePattern) {
@@ -120,10 +137,10 @@ const TradingViewChart = ({
           <h3 className="text-lg font-semibold">{symbol}</h3>
           <Tabs defaultValue="1d" className="w-[300px]">
             <TabsList>
-              <TabsTrigger value="1h">1H</TabsTrigger>
-              <TabsTrigger value="4h">4H</TabsTrigger>
-              <TabsTrigger value="1d">1D</TabsTrigger>
-              <TabsTrigger value="1w">1W</TabsTrigger>
+              <TabsTrigger value="1h">1h</TabsTrigger>
+              <TabsTrigger value="4h">4h</TabsTrigger>
+              <TabsTrigger value="1d">1d</TabsTrigger>
+              <TabsTrigger value="1w">1w</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

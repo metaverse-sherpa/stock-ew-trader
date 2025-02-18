@@ -17,6 +17,10 @@ const StockGrid = ({
 }: StockGridProps) => {
   const { stocks, loading, error } = useStocks(timeframe);
 
+  React.useEffect(() => {
+    console.log("StockGrid timeframe changed:", timeframe);
+  }, [timeframe]);
+
   const filteredStocks = React.useMemo(() => {
     if (!searchQuery) return stocks;
     return stocks.filter((stock) =>
@@ -68,7 +72,8 @@ const StockGrid = ({
           confidence={stock.wavePattern?.confidence || 0}
           waveStatus={stock.wavePattern?.status || ""}
           onClick={() => onStockSelect?.(stock.symbol)}
-          prices={stock.prices}
+          prices={stock.prices || []}
+          timeframe={timeframe}
         />
       ))}
     </div>
