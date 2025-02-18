@@ -1,15 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
-import { supabaseUrl, supabaseServiceKey } from "./env";
-import type { Timeframe } from "../src/lib/types";
+// No need to load environment variables as they're hardcoded in supabase.ts
+console.log("Starting seed process...");
 
-if (!supabaseServiceKey) {
-  throw new Error("SUPABASE_SERVICE_KEY (service role key) is required");
-}
+// Now import other modules
+import { WavePatternService } from "../src/lib/services/wavePatternService";
+import type { Timeframe } from "../src/lib/types";
+import { supabase } from "../src/lib/supabase";
 
 console.log("Starting data seeding process...");
-console.log("Using service key:", supabaseServiceKey.slice(0, 10) + "...");
-
-const supabase = createClient(supabaseUrl!, supabaseServiceKey);
 
 async function fetchStockData(symbol: string) {
   // Get data for the last 30 days
@@ -258,43 +255,34 @@ async function seedData() {
           continue;
         }
 
-        // Verify the insert
+        // Verify the price data insert
         const { data: verifyData, error: verifyError } = await supabase
           .from("stock_prices")
           .select("*")
           .eq("symbol", symbol)
           .eq("timeframe", timeframe);
 
-        console.log(`Verification for ${timeframe} ${symbol}:`, {
+        console.log(`Price data verification for ${timeframe} ${symbol}:`, {
           insertedCount: verifyData?.length || 0,
           verifyError: verifyError?.message,
         });
 
-        // Generate and insert wave pattern
-        const currentPrice = priceData[priceData.length - 1].close;
-        const { error: waveError } = await supabase
-          .from("wave_patterns")
-          .upsert({
-            symbol,
-            timeframe,
-            exchange: "NASDAQ",
-            status: "Wave 5 Bullish",
-            confidence: Math.floor(Math.random() * 30) + 70,
-            current_price: currentPrice,
-            start_time: priceData[0].timestamp,
-            wave1_start: currentPrice * 0.9,
-            wave1_end: currentPrice * 1.1,
-            wave2_start: currentPrice * 1.1,
-            wave2_end: currentPrice * 1.0,
-            wave3_start: currentPrice * 1.0,
-            wave3_end: currentPrice * 1.2,
-            wave4_start: currentPrice * 1.2,
-            wave4_end: currentPrice * 1.15,
-            wave5_start: currentPrice * 1.15,
-            target_price1: currentPrice * 1.05,
-            target_price2: currentPrice * 1.1,
-            target_price3: currentPrice * 1.15,
-          });
+        // Wait a bit before generating wave patterns to ensure all price data is properly inserted
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Generate wave patterns using the WavePatternService
+        try {
+          console.log(`Generating wave pattern for ${symbol} ${timeframe}`);
+          await WavePatternService.generateWavePattern(symbol, timeframe);
+          console.log(
+            `Successfully generated wave pattern for ${symbol} ${timeframe}`,
+          );
+        } catch (error) {
+          console.error(
+            `Error generating wave pattern for ${symbol} ${timeframe}:`,
+            error,
+          );
+        }
 
         if (waveError) {
           console.error(

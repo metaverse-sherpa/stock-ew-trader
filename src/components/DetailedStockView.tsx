@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,16 +28,16 @@ const DetailedStockView = ({
   timeframe,
   onTimeframeChange = () => {},
 }: DetailedStockViewProps) => {
-  // Remove local state management and use prop directly
-  const selectedTimeframe = timeframe;
+  const [showElliottWave, setShowElliottWave] = useState(true);
+  const [showFibonacci, setShowFibonacci] = useState(false);
 
   console.log("DetailedStockView rendering:", {
     symbol,
-    timeframe: selectedTimeframe,
+    timeframe,
   });
   const { wavePattern, prices, loading, error } = useStockDetail(
     symbol,
-    selectedTimeframe,
+    timeframe,
   );
 
   console.log("DetailedStockView data:", {
@@ -90,12 +90,14 @@ const DetailedStockView = ({
           <div className="space-y-6">
             <TradingViewChart
               symbol={symbol}
-              timeframe={selectedTimeframe}
+              timeframe={timeframe}
               onTimeframeChange={onTimeframeChange}
               prices={prices}
               wavePattern={wavePattern}
-              showElliottWave={true}
-              showFibonacci={false}
+              showElliottWave={showElliottWave}
+              showFibonacci={showFibonacci}
+              onToggleElliottWave={setShowElliottWave}
+              onToggleFibonacci={setShowFibonacci}
             />
             {wavePattern && (
               <AIPredictions

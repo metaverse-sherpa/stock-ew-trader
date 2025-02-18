@@ -75,7 +75,8 @@ const StockCard = ({
           handleScale: false,
         });
 
-        const series = chart.addAreaSeries({
+        // Add the price area series
+        const areaSeries = chart.addAreaSeries({
           lineColor: change >= 0 ? "#22c55e" : "#ef4444",
           topColor:
             change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
@@ -94,13 +95,45 @@ const StockCard = ({
             value: price.close,
           }));
 
-        console.log("Chart data prepared:", {
-          dataPoints: data.length,
-          firstPoint: data[0],
-          lastPoint: data[data.length - 1],
-        });
+        areaSeries.setData(data);
 
-        series.setData(data);
+        // Add Elliott Wave lines if we have wave data
+        if (waveStatus?.includes("Wave 5") && data.length > 0) {
+          // Define wave points (simplified for the mini chart)
+          const wavePoints = [
+            { price: price * 0.95 }, // Approximate wave points based on current price
+            { price: price * 0.98 },
+            { price: price * 1.02 },
+            { price: price * 1.0 },
+            { price: price * 1.05 },
+          ];
+
+          // Calculate time points
+          const timePoints = [];
+          const numPoints = wavePoints.length;
+
+          for (let i = 0; i < numPoints; i++) {
+            const index = Math.min(
+              Math.floor((i / (numPoints - 1)) * (data.length - 1)),
+              data.length - 1,
+            );
+            timePoints.push(data[index].time);
+          }
+
+          // Add a single line series for all waves
+          const waveSeries = chart.addLineSeries({
+            color: "#8b5cf6",
+            lineWidth: 1,
+          });
+
+          // Create connected line data
+          const waveData = wavePoints.map((point, index) => ({
+            time: timePoints[index],
+            value: point.price,
+          }));
+
+          waveSeries.setData(waveData);
+        }
 
         // Fit the chart content
         chart.timeScale().fitContent();

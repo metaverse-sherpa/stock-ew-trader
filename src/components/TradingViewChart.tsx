@@ -33,16 +33,30 @@ const TradingViewChart = ({
   onTimeframeChange = () => {},
 }: TradingViewChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+  const waveSeriesRef = useRef<any[]>([]);
 
   useEffect(() => {
-    let chart: any = null;
-
     if (!chartContainerRef.current || !prices?.length) {
       console.log("No chart container or prices:", {
         containerExists: !!chartContainerRef.current,
         pricesLength: prices?.length,
       });
       return;
+    }
+
+    // Clean up existing chart before creating a new one
+    if (chartRef.current) {
+      try {
+        waveSeriesRef.current.forEach((series) => {
+          chartRef.current.removeSeries(series);
+        });
+        chartRef.current.remove();
+      } catch (error) {
+        console.error("Error cleaning up old chart:", error);
+      }
+      waveSeriesRef.current = [];
+      chartRef.current = null;
     }
 
     console.log("Rendering chart with prices:", {
@@ -52,7 +66,18 @@ const TradingViewChart = ({
     });
 
     try {
-      chart = createChart(chartContainerRef.current!, {
+      // Clear existing chart
+      if (chartRef.current) {
+        // Remove existing wave lines
+        waveSeriesRef.current.forEach((series) => {
+          chartRef.current.removeSeries(series);
+        });
+        waveSeriesRef.current = [];
+        chartRef.current.remove();
+      }
+
+      // Create new chart
+      const chart = createChart(chartContainerRef.current!, {
         layout: {
           background: { type: ColorType.Solid, color: "transparent" },
           textColor: "#d1d5db",
@@ -64,6 +89,7 @@ const TradingViewChart = ({
         width: chartContainerRef.current.clientWidth,
         height: 500,
       });
+      chartRef.current = chart;
 
       const candlestickSeries = chart.addCandlestickSeries({
         upColor: "#22c55e",
@@ -86,15 +112,11 @@ const TradingViewChart = ({
           close: price.close,
         }));
 
-      console.log("Processed chart data:", data);
       candlestickSeries.setData(data);
-
-      // Fit the content
-      chart.timeScale().fitContent();
 
       // Add Elliott Wave markers if enabled and pattern exists
       if (showElliottWave && wavePattern && data.length > 0) {
-        console.log("Drawing Elliott Wave patterns for:", {
+        console.log("Drawing Elliott Wave patterns:", {
           timeframe,
           wavePattern,
         });
@@ -137,7 +159,7 @@ const TradingViewChart = ({
 
         // Add wave lines connecting start and end points
         wavePoints.forEach(({ start, end }, index) => {
-          const series = chart.addLineSeries({
+          const waveLine = chart.addLineSeries({
             color: "#8b5cf6",
             lineWidth: 2,
             title: `Wave ${start.label}`,
@@ -145,52 +167,36 @@ const TradingViewChart = ({
 
           // Ensure we have valid time points
           if (timePoints[index] && timePoints[index + 1]) {
-            series.setData([
+            waveLine.setData([
               { time: timePoints[index], value: start.price },
               { time: timePoints[index + 1], value: end.price },
             ]);
           }
+          waveSeriesRef.current.push(waveLine);
         });
       }
+
+      // Fit the content
+      chart.timeScale().fitContent();
     } catch (error) {
       console.error("Error creating chart:", error);
     }
-
-    // Single cleanup function
+    // Cleanup function
     return () => {
-      if (chart) {
+      if (chartRef.current) {
         try {
-          chart.remove();
+          waveSeriesRef.current.forEach((series) => {
+            chartRef.current.removeSeries(series);
+          });
+          chartRef.current.remove();
         } catch (error) {
           console.error("Error cleaning up chart:", error);
         }
+        waveSeriesRef.current = [];
+        chartRef.current = null;
       }
     };
   }, [prices, showElliottWave, wavePattern, timeframe]);
-
-  // Handle window resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        const width = chartContainerRef.current.clientWidth;
-        const chart = createChart(chartContainerRef.current, {
-          layout: {
-            background: { type: ColorType.Solid, color: "transparent" },
-            textColor: "#d1d5db",
-          },
-          grid: {
-            vertLines: { color: "rgba(42, 46, 57, 0.5)" },
-            horzLines: { color: "rgba(42, 46, 57, 0.5)" },
-          },
-          width,
-          height: 500,
-        });
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   return (
     <Card className="w-full h-[600px] bg-background p-4">
