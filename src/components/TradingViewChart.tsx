@@ -35,6 +35,7 @@ const TradingViewChart = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const waveSeriesRef = useRef<any[]>([]);
+  const fibSeriesRef = useRef<any[]>([]);
 
   useEffect(() => {
     if (!chartContainerRef.current || !prices?.length) {
@@ -115,65 +116,121 @@ const TradingViewChart = ({
       candlestickSeries.setData(data);
 
       // Add Elliott Wave markers if enabled and pattern exists
-      if (showElliottWave && wavePattern && data.length > 0) {
-        console.log("Drawing Elliott Wave patterns:", {
-          timeframe,
-          wavePattern,
-        });
-
-        // Define wave points with both start and end
-        const wavePoints = [
-          {
-            start: { price: wavePattern.wave1_start, label: "1" },
-            end: { price: wavePattern.wave1_end, label: "1" },
-          },
-          {
-            start: { price: wavePattern.wave2_start, label: "2" },
-            end: { price: wavePattern.wave2_end, label: "2" },
-          },
-          {
-            start: { price: wavePattern.wave3_start, label: "3" },
-            end: { price: wavePattern.wave3_end, label: "3" },
-          },
-          {
-            start: { price: wavePattern.wave4_start, label: "4" },
-            end: { price: wavePattern.wave4_end, label: "4" },
-          },
-          {
-            start: { price: wavePattern.wave5_start, label: "5" },
-            end: { price: wavePattern.target_price1, label: "5" },
-          },
-        ];
-
-        // Calculate time points for wave distribution
-        const timePoints = [];
-        const numPoints = wavePoints.length + 1; // We need one more point than waves
-
-        for (let i = 0; i < numPoints; i++) {
-          const index = Math.min(
-            Math.floor((i / (numPoints - 1)) * (data.length - 1)),
-            data.length - 1,
-          );
-          timePoints.push(data[index].time);
-        }
-
-        // Add wave lines connecting start and end points
-        wavePoints.forEach(({ start, end }, index) => {
-          const waveLine = chart.addLineSeries({
-            color: "#8b5cf6",
-            lineWidth: 2,
-            title: `Wave ${start.label}`,
+      if (wavePattern && data.length > 0) {
+        if (showElliottWave) {
+          console.log("Drawing Elliott Wave patterns:", {
+            timeframe,
+            wavePattern,
           });
 
-          // Ensure we have valid time points
-          if (timePoints[index] && timePoints[index + 1]) {
-            waveLine.setData([
-              { time: timePoints[index], value: start.price },
-              { time: timePoints[index + 1], value: end.price },
-            ]);
+          // Define wave points with both start and end
+          const wavePoints = [
+            {
+              start: { price: wavePattern.wave1_start, label: "1" },
+              end: { price: wavePattern.wave1_end, label: "1" },
+            },
+            {
+              start: { price: wavePattern.wave2_start, label: "2" },
+              end: { price: wavePattern.wave2_end, label: "2" },
+            },
+            {
+              start: { price: wavePattern.wave3_start, label: "3" },
+              end: { price: wavePattern.wave3_end, label: "3" },
+            },
+            {
+              start: { price: wavePattern.wave4_start, label: "4" },
+              end: { price: wavePattern.wave4_end, label: "4" },
+            },
+            {
+              start: { price: wavePattern.wave5_start, label: "5" },
+              end: { price: wavePattern.target_price1, label: "5" },
+            },
+          ];
+
+          // Calculate time points for wave distribution
+          const timePoints = [];
+          const numPoints = wavePoints.length + 1; // We need one more point than waves
+
+          for (let i = 0; i < numPoints; i++) {
+            const index = Math.min(
+              Math.floor((i / (numPoints - 1)) * (data.length - 1)),
+              data.length - 1,
+            );
+            timePoints.push(data[index].time);
           }
-          waveSeriesRef.current.push(waveLine);
-        });
+
+          // Add wave lines connecting start and end points
+          wavePoints.forEach(({ start, end }, index) => {
+            const waveLine = chart.addLineSeries({
+              color: "#8b5cf6",
+              lineWidth: 2,
+              title: `Wave ${start.label}`,
+              lastValueVisible: false, // Hide the default label
+            });
+
+            // Ensure we have valid time points
+            if (timePoints[index] && timePoints[index + 1]) {
+              waveLine.setData([
+                { time: timePoints[index], value: start.price },
+                { time: timePoints[index + 1], value: end.price },
+              ]);
+
+              // Add wave number marker at the end of each wave
+              const markerColor = "#8b5cf6";
+              const textColor = "white";
+              waveLine.setMarkers([
+                {
+                  time: timePoints[index + 1],
+                  position: "aboveBar",
+                  color: markerColor,
+                  shape: "circle",
+                  text: start.label,
+                  size: 1,
+                  textColor: textColor,
+                },
+              ]);
+            }
+            waveSeriesRef.current.push(waveLine);
+          });
+        }
+
+        // Add Fibonacci retracement levels if enabled
+        if (showFibonacci) {
+          const fibLevels = [
+            { level: 0, color: "#ef4444" }, // Start (0%)
+            { level: 0.236, color: "#8b5cf6" }, // 23.6%
+            { level: 0.382, color: "#8b5cf6" }, // 38.2%
+            { level: 0.5, color: "#8b5cf6" }, // 50%
+            { level: 0.618, color: "#8b5cf6" }, // 61.8%
+            { level: 0.786, color: "#8b5cf6" }, // 78.6%
+            { level: 1, color: "#22c55e" }, // Target (100%)
+          ];
+
+          const wave4End = wavePattern.wave4_end;
+          const wave5Target = wavePattern.target_price1;
+          const priceRange = wave5Target - wave4End;
+
+          fibLevels.forEach(({ level, color }) => {
+            const price = wave4End + priceRange * level;
+            const fibLine = chart.addLineSeries({
+              color: color,
+              lineWidth: 1,
+              lineStyle: 2, // Dashed
+              title: `Fib ${(level * 100).toFixed(1)}%`,
+            });
+
+            // Create a horizontal line across the visible range
+            const startTime = data[0].time;
+            const endTime = data[data.length - 1].time;
+
+            fibLine.setData([
+              { time: startTime, value: price },
+              { time: endTime, value: price },
+            ]);
+
+            fibSeriesRef.current.push(fibLine);
+          });
+        }
       }
 
       // Fit the content
@@ -185,7 +242,12 @@ const TradingViewChart = ({
     return () => {
       if (chartRef.current) {
         try {
+          // Clean up wave lines
           waveSeriesRef.current.forEach((series) => {
+            chartRef.current.removeSeries(series);
+          });
+          // Clean up fibonacci lines
+          fibSeriesRef.current.forEach((series) => {
             chartRef.current.removeSeries(series);
           });
           chartRef.current.remove();
@@ -193,10 +255,11 @@ const TradingViewChart = ({
           console.error("Error cleaning up chart:", error);
         }
         waveSeriesRef.current = [];
+        fibSeriesRef.current = [];
         chartRef.current = null;
       }
     };
-  }, [prices, showElliottWave, wavePattern, timeframe]);
+  }, [prices, showElliottWave, showFibonacci, wavePattern, timeframe]);
 
   return (
     <Card className="w-full h-[600px] bg-background p-4">
