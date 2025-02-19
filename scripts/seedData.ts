@@ -1,7 +1,9 @@
-// No need to load environment variables as they're hardcoded in supabase.ts
+import { config } from "dotenv";
+config(); // Load environment variables
+
 console.log("Starting seed process...");
 
-// Now import other modules
+// Import other modules
 import { WavePatternService } from "../src/lib/services/wavePatternService";
 import type { Timeframe } from "../src/lib/types";
 import { supabase } from "../src/lib/supabase";
@@ -11,7 +13,7 @@ console.log("Starting data seeding process...");
 async function generateSyntheticData(symbol: string) {
   const now = new Date();
   const data = [];
-  const hoursBack = 1000; // Generate 1000 hours of data
+  const hoursBack = 365 * 24; // Generate 1 year of hourly data
   const basePrice = 100; // Starting price
 
   // Wave parameters
@@ -29,8 +31,9 @@ async function generateSyntheticData(symbol: string) {
     const timestamp = new Date(
       now.getTime() - (hoursBack - i) * 60 * 60 * 1000,
     );
-    let priceChange = 0;
+
     const progress = i / hoursBack;
+    let priceChange = 0;
 
     // Add some random noise
     const noise = (Math.random() - 0.5) * 0.002 * currentPrice;
@@ -168,11 +171,6 @@ function aggregateCandles(candles: any[], interval: number) {
     });
   }
 
-  //console.log(`Aggregation complete for interval ${interval}:`, {
-  //  outputCandles: aggregated.length,
-  //  firstAggregated: aggregated[0],
-  //  lastAggregated: aggregated[aggregated.length - 1],
-  //});
   return aggregated;
 }
 
@@ -264,17 +262,15 @@ async function seedData() {
         last: hourlyCandles[hourlyCandles.length - 1],
       });
 
-      // Generate and insert data for each timeframe
+      // Process each timeframe
       for (const timeframe of timeframes) {
         console.log(`Processing ${timeframe} data for ${symbol}...`);
 
-        let timeframeData;
-        if (timeframe === "1h") {
-          timeframeData = hourlyCandles;
-        } else {
-          const interval = timeframe === "4h" ? 4 : 24; // 24 hours in a day
-          timeframeData = aggregateCandles(hourlyCandles, interval);
-        }
+        // Generate timeframe-specific data
+        const timeframeData =
+          timeframe === "1h"
+            ? hourlyCandles
+            : aggregateCandles(hourlyCandles, timeframe === "4h" ? 4 : 24);
 
         // Add symbol and timeframe to each candle
         const priceData = timeframeData.map((candle) => ({
@@ -284,12 +280,6 @@ async function seedData() {
         }));
 
         console.log(`Generated ${priceData.length} candles for ${timeframe}`);
-
-        //console.log(`Inserting ${timeframe} data for ${symbol}:`, {
-        //  count: priceData.length,
-        //  first: priceData[0],
-        //  last: priceData[priceData.length - 1],
-        //});
 
         // Insert price data
         const { error: insertError } = await supabase
@@ -304,22 +294,7 @@ async function seedData() {
           continue;
         }
 
-        // Verify the price data insert
-        const { data: verifyData, error: verifyError } = await supabase
-          .from("stock_prices")
-          .select("*")
-          .eq("symbol", symbol)
-          .eq("timeframe", timeframe);
-
-        console.log(`Price data verification for ${timeframe} ${symbol}:`, {
-          insertedCount: verifyData?.length || 0,
-          verifyError: verifyError?.message,
-        });
-
-        // Wait a bit before generating wave patterns to ensure all price data is properly inserted
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // Generate wave patterns using the WavePatternService
+        // Generate wave patterns
         try {
           console.log(`Generating wave pattern for ${symbol} ${timeframe}`);
           await WavePatternService.generateWavePattern(symbol, timeframe);
@@ -333,17 +308,11 @@ async function seedData() {
           );
         }
 
-        if (waveError) {
-          console.error(
-            `Error inserting wave pattern for ${symbol} ${timeframe}:`,
-            waveError,
-          );
-        }
-
-        console.log(`Successfully processed ${timeframe} data for ${symbol}`);
+        // Wait between operations
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      // Wait 1 second between stocks to respect rate limits
+      // Wait between stocks
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 

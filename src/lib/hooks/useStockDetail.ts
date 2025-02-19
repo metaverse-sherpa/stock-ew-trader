@@ -20,7 +20,10 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
           .eq("timeframe", timeframe)
           .single();
 
-        if (patternError) throw patternError;
+        // Don't throw on pattern error, just set pattern to null
+        if (patternError) {
+          console.warn("No wave pattern found:", patternError);
+        }
 
         // Fetch historical prices
         console.log("Fetching prices with params:", { symbol, timeframe });
@@ -44,8 +47,10 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
 
         if (priceError) throw priceError;
 
-        setWavePattern(patternData);
-        setPrices(priceData);
+        // Set wave pattern (might be null if not found)
+        setWavePattern(patternData || null);
+        // Always set prices if we have them
+        setPrices(priceData || []);
       } catch (err) {
         setError(
           err instanceof Error

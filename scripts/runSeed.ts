@@ -2,6 +2,17 @@ import { seedData } from "./seedData";
 
 console.log("Starting seed process...");
 
+// Handle process termination gracefully
+process.on("SIGINT", () => {
+  console.log("\nGracefully shutting down from SIGINT (Ctrl+C)");
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  console.log("\nGracefully shutting down from SIGTERM");
+  process.exit(0);
+});
+
 seedData()
   .then(() => {
     console.log("Seed completed successfully");

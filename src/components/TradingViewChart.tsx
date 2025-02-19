@@ -46,6 +46,9 @@ const TradingViewChart = ({
       return;
     }
 
+    // Use all prices if no wave pattern exists
+    const filteredPrices = prices;
+
     // Clean up existing chart before creating a new one
     if (chartRef.current) {
       try {
@@ -100,7 +103,7 @@ const TradingViewChart = ({
         wickDownColor: "#ef4444",
       });
 
-      const data = prices
+      const data = filteredPrices
         .sort(
           (a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
@@ -115,15 +118,15 @@ const TradingViewChart = ({
 
       candlestickSeries.setData(data);
 
-      // Add Elliott Wave markers if enabled and pattern exists
-      if (wavePattern && data.length > 0) {
+      // Add Elliott Wave markers if enabled, pattern exists, and we have wave data
+      if (wavePattern && data.length > 0 && wavePattern.wave1_start) {
         if (showElliottWave) {
           console.log("Drawing Elliott Wave patterns:", {
             timeframe,
             wavePattern,
           });
 
-          // Define wave points with both start and end
+          // Define all possible wave points including ABC waves
           const wavePoints = [
             {
               start: { price: wavePattern.wave1_start, label: "1" },
@@ -143,9 +146,40 @@ const TradingViewChart = ({
             },
             {
               start: { price: wavePattern.wave5_start, label: "5" },
-              end: { price: wavePattern.target_price1, label: "5" },
+              end: {
+                price: wavePattern.wave5_end || wavePattern.target_price1,
+                label: "5",
+              },
             },
-          ];
+            // ABC waves
+            wavePattern.wave_a_start
+              ? {
+                  start: { price: wavePattern.wave_a_start, label: "A" },
+                  end: {
+                    price: wavePattern.wave_a_end || currentPrice,
+                    label: "A",
+                  },
+                }
+              : null,
+            wavePattern.wave_b_start
+              ? {
+                  start: { price: wavePattern.wave_b_start, label: "B" },
+                  end: {
+                    price: wavePattern.wave_b_end || currentPrice,
+                    label: "B",
+                  },
+                }
+              : null,
+            wavePattern.wave_c_start
+              ? {
+                  start: { price: wavePattern.wave_c_start, label: "C" },
+                  end: {
+                    price: wavePattern.wave_c_end || currentPrice,
+                    label: "C",
+                  },
+                }
+              : null,
+          ].filter(Boolean);
 
           // Calculate time points for wave distribution
           const timePoints = [];
@@ -161,11 +195,14 @@ const TradingViewChart = ({
 
           // Add wave lines connecting start and end points
           wavePoints.forEach(({ start, end }, index) => {
+            // Different styling for impulse vs corrective waves
+            const isCorrectiveWave = ["A", "B", "C"].includes(start.label);
             const waveLine = chart.addLineSeries({
-              color: "#8b5cf6",
-              lineWidth: 2,
+              color: isCorrectiveWave ? "#ec4899" : "#8b5cf6", // Pink for ABC, Purple for 12345
+              lineWidth: isCorrectiveWave ? 1.5 : 2,
+              lineStyle: isCorrectiveWave ? 2 : 0, // Dashed for ABC waves
               title: `Wave ${start.label}`,
-              lastValueVisible: false, // Hide the default label
+              lastValueVisible: false,
             });
 
             // Ensure we have valid time points
@@ -178,14 +215,15 @@ const TradingViewChart = ({
               // Add wave number marker at the end of each wave
               const markerColor = "#8b5cf6";
               const textColor = "white";
+              const isCorrectiveWave = ["A", "B", "C"].includes(start.label);
               waveLine.setMarkers([
                 {
                   time: timePoints[index + 1],
-                  position: "aboveBar",
-                  color: markerColor,
-                  shape: "circle",
+                  position: isCorrectiveWave ? "belowBar" : "aboveBar",
+                  color: isCorrectiveWave ? "#ec4899" : "#8b5cf6",
+                  shape: isCorrectiveWave ? "square" : "circle",
                   text: start.label,
-                  size: 1,
+                  size: isCorrectiveWave ? 0.8 : 1,
                   textColor: textColor,
                 },
               ]);
@@ -195,8 +233,9 @@ const TradingViewChart = ({
         }
 
         // Add Fibonacci retracement levels if enabled
-        if (showFibonacci) {
-          const fibLevels = [
+        if (showFibonacci && wavePattern.wave5_end) {
+          // Fibonacci levels for both impulse and corrective waves
+          const impulseFibLevels = [
             { level: 0, color: "#ef4444" }, // Start (0%)
             { level: 0.236, color: "#8b5cf6" }, // 23.6%
             { level: 0.382, color: "#8b5cf6" }, // 38.2%
@@ -205,6 +244,17 @@ const TradingViewChart = ({
             { level: 0.786, color: "#8b5cf6" }, // 78.6%
             { level: 1, color: "#22c55e" }, // Target (100%)
           ];
+
+          // Additional Fibonacci levels for ABC correction
+          const correctiveFibLevels = [
+            { level: 0.382, color: "#ec4899" }, // 38.2% retracement
+            { level: 0.5, color: "#ec4899" }, // 50% retracement
+            { level: 0.618, color: "#ec4899" }, // 61.8% retracement
+          ];
+
+          const fibLevels = wavePattern.wave_a_start
+            ? correctiveFibLevels
+            : impulseFibLevels;
 
           const wave4End = wavePattern.wave4_end;
           const wave5Target = wavePattern.target_price1;

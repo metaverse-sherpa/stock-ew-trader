@@ -7,6 +7,9 @@ export type WaveStatus =
   | "Wave 4"
   | "Wave 5 Bullish"
   | "Wave 5 Bearish"
+  | "Wave A"
+  | "Wave B"
+  | "Wave C"
   | "Completed";
 
 export interface Stock {
@@ -27,6 +30,7 @@ export interface StockPrice {
   low: number;
   close: number;
   volume: number;
+  wave1_start?: boolean;
   created_at: string;
 }
 
@@ -51,6 +55,12 @@ export interface WavePattern {
   target_price1: number;
   target_price2: number;
   target_price3: number;
+  wave_a_start?: number;
+  wave_a_end?: number;
+  wave_b_start?: number;
+  wave_b_end?: number;
+  wave_c_start?: number;
+  wave_c_end?: number;
   created_at: string;
   updated_at: string;
 }

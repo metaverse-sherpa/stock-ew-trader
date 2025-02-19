@@ -51,6 +51,18 @@ const StockCard = ({
       return;
     }
 
+    // Filter prices for current timeframe
+    const timeframePrices = prices.filter((p) => p.timeframe === timeframe);
+
+    // Sort prices by timestamp
+    const sortedPrices = timeframePrices.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
+
+    // Take the last 50 prices for the mini chart
+    const filteredPrices = sortedPrices.slice(-50);
+
     // Add a small delay to ensure the library is loaded
     const timer = setTimeout(() => {
       try {
@@ -85,7 +97,7 @@ const StockCard = ({
           lineWidth: 2,
         });
 
-        const data = prices
+        const data = filteredPrices
           .sort(
             (a, b) =>
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
