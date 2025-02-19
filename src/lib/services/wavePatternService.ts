@@ -3,399 +3,308 @@ import type { Timeframe, WaveStatus, StockPrice } from "../types";
 
 export class WavePatternService {
   static async generateWavePattern(symbol: string, timeframe: Timeframe) {
+    // Only analyze daily timeframe
+    if (timeframe !== "1d") {
+      console.log(`Skipping ${timeframe} timeframe - only analyzing daily`);
+      return;
+    }
+
+    // Get historical prices from Jan 2022
+    const startDate = new Date("2022-01-01").toISOString();
+
     // Get historical prices ordered by time
     const { data: prices } = await supabase
       .from("stock_prices")
       .select("*")
       .eq("symbol", symbol)
       .eq("timeframe", timeframe)
+      .gte("timestamp", startDate)
       .order("timestamp", { ascending: true });
 
     if (!prices?.length) return;
 
-    // Find significant price swings to identify wave points
-    const pivots = this.findPriceSwings(prices);
-    console.log(`Found ${pivots.length} pivots for ${symbol} ${timeframe}`);
+    // Find pivot points
+    const pivots = this.findPivots(prices);
 
-    if (pivots.length < 3) {
-      console.log(
-        `Not enough pivots (${pivots.length}) to generate wave pattern for ${symbol} ${timeframe}`,
-      );
+    // Find potential Elliott Wave patterns
+    const patterns = this.findElliottWavePatterns(pivots, prices);
+
+    // Only keep patterns that are currently in Wave 5
+    const wave5Patterns = patterns.filter((p) =>
+      this.isValidWave5Pattern(p, prices[prices.length - 1].close),
+    );
+
+    if (wave5Patterns.length === 0) {
+      console.log(`No valid Wave 5 patterns found for ${symbol}`);
       return;
     }
 
-    // Identify potential wave 1 start
-    let wave1StartIndex = -1;
-    for (let i = 0; i < pivots.length - 2; i++) {
-      const potential1 = pivots[i];
-      const potential2 = pivots[i + 1];
-      const potential3 = pivots[i + 2];
-
-      // Look for impulsive wave pattern (up-down-up or down-up-down)
-      if (
-        (potential1.isHigh && !potential2.isHigh && potential3.isHigh) ||
-        (!potential1.isHigh && potential2.isHigh && !potential3.isHigh)
-      ) {
-        wave1StartIndex = i;
-        break;
-      }
-    }
-
-    if (wave1StartIndex === -1) {
-      console.log("No valid wave 1 pattern found");
-      return;
-    }
-
+    // Use the most recent Wave 5 pattern
+    const selectedPattern = wave5Patterns[wave5Patterns.length - 1];
     const currentPrice = prices[prices.length - 1].close;
 
-    // Map out the waves based on available pivot points
-    const waves = {
-      wave1_start: pivots[wave1StartIndex].price,
-      wave1_end: pivots[wave1StartIndex + 1].price,
-      wave2_start: pivots[wave1StartIndex + 1].price,
-      wave2_end: pivots[wave1StartIndex + 2]?.price,
-      wave3_start: pivots[wave1StartIndex + 2]?.price,
-      wave3_end: pivots[wave1StartIndex + 3]?.price,
-      wave4_start: pivots[wave1StartIndex + 3]?.price,
-      wave4_end: pivots[wave1StartIndex + 4]?.price,
-      wave5_start: pivots[wave1StartIndex + 4]?.price,
-      wave5_end: pivots[wave1StartIndex + 5]?.price,
-      wave_a_start: pivots[wave1StartIndex + 5]?.price,
-      wave_a_end: pivots[wave1StartIndex + 6]?.price,
-      wave_b_start: pivots[wave1StartIndex + 6]?.price,
-      wave_b_end: pivots[wave1StartIndex + 7]?.price,
-      wave_c_start: pivots[wave1StartIndex + 7]?.price,
-      wave_c_end: null, // This will be set if the pattern completes
-    };
-
-    // Validate all wave points exist
-    if (
-      !waves.wave1_start ||
-      !waves.wave1_end ||
-      !waves.wave2_end ||
-      !waves.wave3_end ||
-      !waves.wave4_end ||
-      !waves.wave5_start
-    ) {
-      console.log("Invalid wave points detected");
-      return;
-    }
-
-    // Calculate confidence based on pattern adherence
-    const confidence = this.calculateConfidence({
-      prices,
-      waves,
-    });
-
-    // Determine wave status
-    const status = this.determineWaveStatus({
-      currentPrice,
-      waves,
-      prices,
-    });
-
-    // Find the timestamp of Wave 1 start
-    const wave1StartTimestamp = pivots[wave1StartIndex].timestamp;
-
-    // First, reset all wave1_start flags for this symbol and timeframe
-    await supabase
-      .from("stock_prices")
-      .update({ wave1_start: false })
-      .eq("symbol", symbol)
-      .eq("timeframe", timeframe);
-
-    // Then, set wave1_start flag for the actual Wave 1 start point
-    await supabase
-      .from("stock_prices")
-      .update({ wave1_start: true })
-      .eq("symbol", symbol)
-      .eq("timeframe", timeframe)
-      .eq("timestamp", wave1StartTimestamp);
-
     const pattern = {
-      id: `${symbol}-${timeframe}`, // Create a unique ID
+      id: `${symbol}-${timeframe}`,
       symbol,
       timeframe,
       exchange: "NYSE",
-      status,
-      confidence,
+      status: "Wave 5 Bullish",
+      confidence: this.calculateConfidence({
+        prices,
+        waves: selectedPattern,
+      }),
       current_price: currentPrice,
-      start_time: wave1StartTimestamp,
-      wave1_start: waves.wave1_start,
-      wave1_end: waves.wave1_end,
-      wave2_start: waves.wave2_start,
-      wave2_end: waves.wave2_end,
-      wave3_start: waves.wave3_start,
-      wave3_end: waves.wave3_end,
-      wave4_start: waves.wave4_start,
-      wave4_end: waves.wave4_end,
-      wave5_start: waves.wave5_start,
-      wave5_end: waves.wave5_end || currentPrice, // Use current price if wave5_end not set
-      target_price1: this.calculateTarget(currentPrice, waves.wave5_start, 1),
-      target_price2: this.calculateTarget(currentPrice, waves.wave5_start, 2),
-      target_price3: this.calculateTarget(currentPrice, waves.wave5_start, 3),
-      wave_a_start: waves.wave_a_start || null,
-      wave_a_end: waves.wave_a_end || null,
-      wave_b_start: waves.wave_b_start || null,
-      wave_b_end: waves.wave_b_end || null,
-      wave_c_start: waves.wave_c_start || null,
-      wave_c_end: waves.wave_c_end || null,
+      start_time: selectedPattern.wave1_start.timestamp,
+      wave1_start: selectedPattern.wave1_start.price,
+      wave1_start_time: selectedPattern.wave1_start.timestamp,
+      wave1_end: selectedPattern.wave1_end.price,
+      wave1_end_time: selectedPattern.wave1_end.timestamp,
+      wave2_start: selectedPattern.wave1_end.price,
+      wave2_end: selectedPattern.wave2_end.price,
+      wave2_end_time: selectedPattern.wave2_end.timestamp,
+      wave3_start: selectedPattern.wave2_end.price,
+      wave3_end: selectedPattern.wave3_end.price,
+      wave3_end_time: selectedPattern.wave3_end.timestamp,
+      wave4_start: selectedPattern.wave3_end.price,
+      wave4_end: selectedPattern.wave4_end.price,
+      wave4_end_time: selectedPattern.wave4_end.timestamp,
+      wave5_start: selectedPattern.wave5_start.price,
+      wave5_end: currentPrice,
+      wave5_end_time: prices[prices.length - 1].timestamp,
+      target_price1: this.calculateTarget(
+        currentPrice,
+        selectedPattern.wave5_start.price,
+        1,
+      ),
+      target_price2: this.calculateTarget(
+        currentPrice,
+        selectedPattern.wave5_start.price,
+        2,
+      ),
+      target_price3: this.calculateTarget(
+        currentPrice,
+        selectedPattern.wave5_start.price,
+        3,
+      ),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    console.log(`Generated pattern for ${symbol} ${timeframe}:`, pattern);
+    console.log(`Generated Wave 5 pattern for ${symbol}:`, pattern);
 
     const { error } = await supabase.from("wave_patterns").upsert(pattern);
     if (error) {
-      console.error(
-        `Error upserting wave pattern for ${symbol} ${timeframe}:`,
-        error,
-      );
+      console.error(`Error upserting wave pattern for ${symbol}:`, error);
       return;
     }
-    console.log(`Successfully stored wave pattern for ${symbol} ${timeframe}`);
+
+    console.log(`Successfully stored Wave 5 pattern for ${symbol}`);
   }
 
-  private static findPriceSwings(
+  private static findPivots(
     prices: StockPrice[],
   ): Array<{ price: number; timestamp: string; isHigh: boolean }> {
-    if (!prices || prices.length === 0) {
-      console.log("No prices provided to findPriceSwings");
-      return [];
-    }
+    if (prices.length < 20) return []; // Need enough data for analysis
 
     const pivots: Array<{ price: number; timestamp: string; isHigh: boolean }> =
       [];
 
-    // Find the lowest point in the first third of the data for Wave 1 start
-    const firstThird = prices.slice(0, Math.floor(prices.length / 3));
-    const wave1StartIndex = firstThird.reduce(
-      (minIdx, price, idx) =>
-        price.low < firstThird[minIdx].low ? idx : minIdx,
-      0,
-    );
+    // Use specified lookback periods
+    const lookbackPeriods = [4, 8, 16];
 
-    // Wave 1 start (low)
-    pivots.push({
-      price: firstThird[wave1StartIndex].low,
-      timestamp: firstThird[wave1StartIndex].timestamp,
-      isHigh: false,
-    });
+    for (const lookback of lookbackPeriods) {
+      for (let i = lookback; i < prices.length - lookback; i++) {
+        let isHigh = true;
+        let isLow = true;
 
-    // Find Wave 1 end (high)
-    const afterWave1Start = prices.slice(wave1StartIndex + 1);
-    let currentIndex = wave1StartIndex + 1;
-    let wave1EndIndex = currentIndex;
-    let wave1High = afterWave1Start[0].high;
+        // Check if this is a pivot high or low
+        for (let j = i - lookback; j <= i + lookback; j++) {
+          if (j === i) continue;
+          if (prices[j].high > prices[i].high) isHigh = false;
+          if (prices[j].low < prices[i].low) isLow = false;
+        }
 
-    for (let i = 1; i < afterWave1Start.length; i++) {
-      if (afterWave1Start[i].high > wave1High) {
-        wave1High = afterWave1Start[i].high;
-        wave1EndIndex = currentIndex + i;
-      }
-      // Stop if we find a significant drop
-      if (afterWave1Start[i].low < afterWave1Start[i - 1].low * 0.98) break;
-    }
-
-    // Wave 1 end (high)
-    pivots.push({
-      price: prices[wave1EndIndex].high,
-      timestamp: prices[wave1EndIndex].timestamp,
-      isHigh: true,
-    });
-
-    // Find subsequent waves
-    let isLookingForHigh = false; // Start looking for a low (Wave 2)
-    let lastPivotIndex = wave1EndIndex;
-    let remainingPrices = prices.slice(wave1EndIndex + 1);
-
-    while (pivots.length < 8 && remainingPrices.length > 0) {
-      let extremeValue = isLookingForHigh ? -Infinity : Infinity;
-      let extremeIndex = 0;
-      let windowSize = Math.floor(remainingPrices.length / 3);
-
-      for (let i = 0; i < windowSize; i++) {
-        const price = remainingPrices[i];
-        if (isLookingForHigh) {
-          if (price.high > extremeValue) {
-            extremeValue = price.high;
-            extremeIndex = i;
-          }
-        } else {
-          if (price.low < extremeValue) {
-            extremeValue = price.low;
-            extremeIndex = i;
+        if (isHigh || isLow) {
+          const existingPivot = pivots.find(
+            (p) => p.timestamp === prices[i].timestamp,
+          );
+          if (!existingPivot) {
+            pivots.push({
+              price: isHigh ? prices[i].high : prices[i].low,
+              timestamp: prices[i].timestamp,
+              isHigh,
+            });
           }
         }
       }
-
-      pivots.push({
-        price: isLookingForHigh ? extremeValue : extremeValue,
-        timestamp: remainingPrices[extremeIndex].timestamp,
-        isHigh: isLookingForHigh,
-      });
-
-      lastPivotIndex += extremeIndex + 1;
-      remainingPrices = prices.slice(lastPivotIndex + 1);
-      isLookingForHigh = !isLookingForHigh;
     }
 
-    return pivots;
+    return pivots.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
   }
 
-  private static calculateVolatility(prices: StockPrice[]): number {
-    const returns = prices.slice(1).map((price, i) => {
-      return (price.close - prices[i].close) / prices[i].close;
-    });
-    const mean = returns.reduce((sum, r) => sum + r, 0) / returns.length;
-    const variance =
-      returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) /
-      returns.length;
-    return Math.sqrt(variance);
-  }
-
-  private static findPriceSwingsAlternative(
+  private static findElliottWavePatterns(
+    pivots: Array<{ price: number; timestamp: string; isHigh: boolean }>,
     prices: StockPrice[],
-  ): Array<{ price: number; timestamp: string; isHigh: boolean }> {
-    const pivots: Array<{ price: number; timestamp: string; isHigh: boolean }> =
-      [];
-    const segments = 8; // We need 8 points for Elliott Wave + ABC
-    const segmentSize = Math.floor(prices.length / segments);
+  ) {
+    const patterns = [];
+    const minWaveSize =
+      (prices[prices.length - 1].close - prices[0].close) * 0.03; // 3% of total range
 
-    // Find local extremes in each segment
-    for (let i = 0; i < segments; i++) {
-      const start = i * segmentSize;
-      const end = i === segments - 1 ? prices.length : (i + 1) * segmentSize;
-      const segment = prices.slice(start, end);
+    // Look for potential Wave 1 starts (significant lows)
+    for (let i = 0; i < pivots.length - 20; i++) {
+      // Ensure enough room for all waves
+      // Allow more flexibility in finding waves
+      for (let w1e = i + 1; w1e < Math.min(i + 5, pivots.length - 16); w1e++) {
+        // Wave 1 end
+        for (
+          let w2e = w1e + 1;
+          w2e < Math.min(w1e + 5, pivots.length - 12);
+          w2e++
+        ) {
+          // Wave 2 end
+          for (
+            let w3e = w2e + 1;
+            w3e < Math.min(w2e + 5, pivots.length - 8);
+            w3e++
+          ) {
+            // Wave 3 end
+            for (
+              let w4e = w3e + 1;
+              w4e < Math.min(w3e + 5, pivots.length - 4);
+              w4e++
+            ) {
+              // Validate all indices before creating pattern
+              if (
+                i >= pivots.length ||
+                w1e >= pivots.length ||
+                w2e >= pivots.length ||
+                w3e >= pivots.length ||
+                w4e >= pivots.length
+              )
+                continue;
+              // Wave 4 end
+              const potentialPattern = {
+                wave1_start: pivots[i],
+                wave1_end: pivots[w1e],
+                wave2_end: pivots[w2e],
+                wave3_end: pivots[w3e],
+                wave4_end: pivots[w4e],
+                wave5_start: pivots[w4e],
+              };
 
-      if (segment.length === 0) continue;
+              // Check minimum wave sizes
+              const wave1Size = Math.abs(
+                potentialPattern.wave1_end.price -
+                  potentialPattern.wave1_start.price,
+              );
+              const wave2Size = Math.abs(
+                potentialPattern.wave2_end.price -
+                  potentialPattern.wave1_end.price,
+              );
+              const wave3Size = Math.abs(
+                potentialPattern.wave3_end.price -
+                  potentialPattern.wave2_end.price,
+              );
+              const wave4Size = Math.abs(
+                potentialPattern.wave4_end.price -
+                  potentialPattern.wave3_end.price,
+              );
 
-      // Alternate between finding highs and lows
-      const isHigh = i % 2 === 0;
-      const extreme = isHigh
-        ? Math.max(...segment.map((p) => p.high))
-        : Math.min(...segment.map((p) => p.low));
+              if (
+                wave1Size < minWaveSize ||
+                wave2Size < minWaveSize ||
+                wave3Size < minWaveSize ||
+                wave4Size < minWaveSize
+              )
+                continue;
 
-      // Find the timestamp where this extreme occurred
-      const extremePoint =
-        segment.find((p) =>
-          isHigh ? p.high === extreme : p.low === extreme,
-        ) || segment[Math.floor(segment.length / 2)];
-
-      pivots.push({
-        price: extreme,
-        timestamp: extremePoint.timestamp,
-        isHigh,
-      });
+              if (this.isValidWavePattern(potentialPattern)) {
+                patterns.push(potentialPattern);
+              }
+            }
+          }
+        }
+      }
     }
 
-    return pivots;
+    return patterns;
+  }
+
+  private static isValidWavePattern(pattern: any): boolean {
+    // Get wave sizes
+    const wave1Size = pattern.wave1_end.price - pattern.wave1_start.price;
+    const wave2Size = pattern.wave1_end.price - pattern.wave2_end.price;
+    const wave3Size = pattern.wave3_end.price - pattern.wave2_end.price;
+
+    // Rule 1: Wave 2 cannot retrace more than 100% of Wave 1
+    if (wave2Size / wave1Size > 1) return false;
+
+    // Rule 2: Wave 4 cannot overlap Wave 1's territory
+    if (pattern.wave4_end.price < pattern.wave1_end.price) return false;
+
+    // Additional validation: Check wave directions
+    if (pattern.wave1_end.price <= pattern.wave1_start.price) return false; // Wave 1 must go up
+    if (pattern.wave2_end.price >= pattern.wave1_end.price) return false; // Wave 2 must go down
+    if (pattern.wave3_end.price <= pattern.wave2_end.price) return false; // Wave 3 must go up
+    if (pattern.wave4_end.price >= pattern.wave3_end.price) return false; // Wave 4 must go down
+
+    return true;
+  }
+
+  private static isValidWave5Pattern(
+    pattern: any,
+    currentPrice: number,
+  ): boolean {
+    // Check if we're in Wave 5
+    const wave5Move = currentPrice - pattern.wave5_start.price;
+
+    // Wave 5 should be developing and moving in the right direction
+    if (wave5Move <= 0) return false;
+
+    // Wave 5 shouldn't be extended too far (typical max is 1.618 * Wave 1)
+    const wave1Size = pattern.wave1_end.price - pattern.wave1_start.price;
+    if (wave5Move > wave1Size * 1.618) return false;
+
+    return true;
   }
 
   private static calculateConfidence(params: {
     prices: StockPrice[];
-    waves: {
-      wave1_start: number;
-      wave1_end: number;
-      wave2_end?: number;
-      wave3_end?: number;
-      wave4_end?: number;
-      wave5_end?: number;
-      wave_a_end?: number;
-      wave_b_end?: number;
-      wave_c_end?: number;
-    };
+    waves: any;
   }): number {
     const { waves } = params;
     let confidence = 100;
-    let completedWaves = 0;
 
-    // Basic wave completion confidence
-    if (waves.wave1_end) completedWaves++;
-    if (waves.wave2_end) completedWaves++;
-    if (waves.wave3_end) completedWaves++;
-    if (waves.wave4_end) completedWaves++;
-    if (waves.wave5_end) completedWaves++;
+    // Basic wave validation
+    if (!waves.wave1_start || !waves.wave1_end) confidence -= 20;
+    if (!waves.wave2_end) confidence -= 20;
+    if (!waves.wave3_end) confidence -= 20;
+    if (!waves.wave4_end) confidence -= 20;
+    if (!waves.wave5_start) confidence -= 20;
 
-    // ABC wave completion
-    if (waves.wave_a_end) completedWaves++;
-    if (waves.wave_b_end) completedWaves++;
-    if (waves.wave_c_end) completedWaves++;
+    // Elliott Wave Rules validation
+    const wave1Size = waves.wave1_end.price - waves.wave1_start.price;
+    const wave2Retracement = waves.wave1_end.price - waves.wave2_end.price;
+    const wave3Size = waves.wave3_end.price - waves.wave2_end.price;
+    const wave4Retracement = waves.wave3_end.price - waves.wave4_end.price;
 
-    // Base confidence on wave completion
-    confidence = Math.round(Math.min(confidence, (completedWaves / 8) * 100));
+    // Rule 1: Wave 2 cannot retrace more than 100% of Wave 1
+    if (wave2Retracement / wave1Size > 0.9) confidence -= 10;
 
-    // Validate impulse waves (1, 3, 5, B) are moving up
-    if (waves.wave1_end && waves.wave1_end <= waves.wave1_start)
-      confidence -= 25;
-    if (waves.wave3_end && waves.wave3_end <= waves.wave2_end!)
-      confidence -= 25;
-    if (waves.wave5_end && waves.wave5_end <= waves.wave4_end!)
-      confidence -= 25;
-    if (waves.wave_b_end && waves.wave_b_end <= waves.wave_a_end!)
-      confidence -= 25;
+    // Rule 2: Wave 4 cannot overlap Wave 1
+    if (waves.wave4_end.price <= waves.wave1_end.price) confidence -= 20;
 
-    // Validate corrective waves (2, 4, A, C) are moving down
-    if (waves.wave2_end && waves.wave2_end >= waves.wave1_end) confidence -= 25;
-    if (waves.wave4_end && waves.wave4_end >= waves.wave3_end!)
-      confidence -= 25;
-    if (waves.wave_a_end && waves.wave_a_end >= waves.wave5_end!)
-      confidence -= 25;
-    if (waves.wave_c_end && waves.wave_c_end >= waves.wave_b_end!)
-      confidence -= 25;
+    // Additional guidelines
+    // Wave 3 should be at least 1.618 times Wave 1
+    if (wave3Size < wave1Size * 1.618) confidence -= 5;
 
-    // Elliott Wave Rules
-    if (waves.wave2_end) {
-      // Rule 1: Wave 2 never retraces more than 100% of Wave 1
-      if (waves.wave2_end <= waves.wave1_start) confidence -= 20;
-    }
-
-    if (waves.wave3_end) {
-      // Rule 2: Wave 3 is typically the longest and most powerful
-      const wave1Size = Math.abs(waves.wave1_end - waves.wave1_start);
-      const wave3Size = Math.abs(waves.wave3_end - waves.wave2_end!);
-      if (wave3Size < wave1Size) confidence -= 15;
-    }
-
-    if (waves.wave4_end && waves.wave1_end) {
-      // Rule 3: Wave 4 never enters Wave 1's price territory
-      if (waves.wave4_end <= waves.wave1_end) confidence -= 20;
-    }
+    // Wave 4 should not retrace more than 38.2% of Wave 3
+    if (wave4Retracement / wave3Size > 0.382) confidence -= 5;
 
     return Math.max(confidence, 0);
-  }
-
-  private static determineWaveStatus(params: {
-    currentPrice: number;
-    waves: {
-      wave1_end: number;
-      wave2_end: number;
-      wave3_end: number;
-      wave4_end: number;
-      wave5_end?: number;
-      wave_a_end?: number;
-      wave_b_end?: number;
-      wave_c_end?: number;
-    };
-    prices: StockPrice[];
-  }): WaveStatus {
-    const { currentPrice, waves, prices } = params;
-    const recentPrices = prices.slice(-5);
-    const trend =
-      recentPrices[recentPrices.length - 1].close > recentPrices[0].close;
-
-    // Determine which wave we're in based on completed waves
-    if (!waves.wave2_end) return "Wave 1";
-    if (!waves.wave3_end) return "Wave 2";
-    if (!waves.wave4_end) return "Wave 3";
-    if (!waves.wave5_end) return "Wave 4";
-    if (!waves.wave_a_end) return trend ? "Wave 5 Bullish" : "Wave 5 Bearish";
-    if (!waves.wave_b_end) return "Wave A";
-    if (!waves.wave_c_end) return "Wave B";
-    if (waves.wave_c_end) return "Wave C";
-
-    return "Completed";
   }
 
   private static calculateTarget(
@@ -412,15 +321,12 @@ export class WavePatternService {
 
   static async generateAllPatterns(): Promise<void> {
     const { data: stocks } = await supabase.from("stocks").select("symbol");
-
     if (!stocks) return;
 
-    const timeframes: Timeframe[] = ["1h", "4h", "1d"];
-
     for (const { symbol } of stocks) {
-      for (const timeframe of timeframes) {
-        await this.generateWavePattern(symbol, timeframe);
-      }
+      await this.generateWavePattern(symbol, "1d");
+      // Add a small delay between processing each stock
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 }

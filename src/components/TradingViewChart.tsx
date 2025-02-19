@@ -126,81 +126,122 @@ const TradingViewChart = ({
             wavePattern,
           });
 
-          // Define all possible wave points including ABC waves
+          console.log("Drawing Elliott Wave patterns:", {
+            timeframe,
+            wavePattern,
+          });
+
+          // Define wave points
           const wavePoints = [
+            // Wave 1 (impulse up)
             {
               start: { price: wavePattern.wave1_start, label: "1" },
               end: { price: wavePattern.wave1_end, label: "1" },
+              isImpulse: true,
             },
+            // Wave 2 (corrective down)
             {
-              start: { price: wavePattern.wave2_start, label: "2" },
+              start: { price: wavePattern.wave1_end, label: "2" },
               end: { price: wavePattern.wave2_end, label: "2" },
+              isImpulse: false,
             },
+            // Wave 3 (impulse up)
             {
-              start: { price: wavePattern.wave3_start, label: "3" },
+              start: { price: wavePattern.wave2_end, label: "3" },
               end: { price: wavePattern.wave3_end, label: "3" },
+              isImpulse: true,
             },
+            // Wave 4 (corrective down)
             {
-              start: { price: wavePattern.wave4_start, label: "4" },
+              start: { price: wavePattern.wave3_end, label: "4" },
               end: { price: wavePattern.wave4_end, label: "4" },
+              isImpulse: false,
             },
+            // Wave 5 (impulse up)
             {
-              start: { price: wavePattern.wave5_start, label: "5" },
+              start: { price: wavePattern.wave4_end, label: "5" },
               end: {
                 price: wavePattern.wave5_end || wavePattern.target_price1,
                 label: "5",
               },
+              isImpulse: true,
             },
-            // ABC waves
-            wavePattern.wave_a_start
-              ? {
-                  start: { price: wavePattern.wave_a_start, label: "A" },
-                  end: {
-                    price: wavePattern.wave_a_end || currentPrice,
-                    label: "A",
-                  },
-                }
-              : null,
-            wavePattern.wave_b_start
-              ? {
-                  start: { price: wavePattern.wave_b_start, label: "B" },
-                  end: {
-                    price: wavePattern.wave_b_end || currentPrice,
-                    label: "B",
-                  },
-                }
-              : null,
-            wavePattern.wave_c_start
-              ? {
-                  start: { price: wavePattern.wave_c_start, label: "C" },
-                  end: {
-                    price: wavePattern.wave_c_end || currentPrice,
-                    label: "C",
-                  },
-                }
-              : null,
-          ].filter(Boolean);
+          ];
 
-          // Calculate time points for wave distribution
-          const timePoints = [];
-          const numPoints = wavePoints.length + 1; // We need one more point than waves
-
-          for (let i = 0; i < numPoints; i++) {
-            const index = Math.min(
-              Math.floor((i / (numPoints - 1)) * (data.length - 1)),
-              data.length - 1,
-            );
-            timePoints.push(data[index].time);
+          // Add ABC waves if they exist
+          if (wavePattern.wave_a_start) {
+            wavePoints.push({
+              start: {
+                price: wavePattern.wave5_end || wavePattern.target_price1,
+                label: "A",
+              },
+              end: { price: wavePattern.wave_a_end, label: "A" },
+              isImpulse: false,
+            });
+          }
+          if (wavePattern.wave_b_start) {
+            wavePoints.push({
+              start: { price: wavePattern.wave_a_end, label: "B" },
+              end: { price: wavePattern.wave_b_end, label: "B" },
+              isImpulse: true,
+            });
+          }
+          if (wavePattern.wave_c_start) {
+            wavePoints.push({
+              start: { price: wavePattern.wave_b_end, label: "C" },
+              end: { price: wavePattern.wave_c_end, label: "C" },
+              isImpulse: false,
+            });
           }
 
+          // Use actual wave timestamps for time points
+          const timePoints = [
+            Math.floor(new Date(wavePattern.wave1_start_time).getTime() / 1000),
+            Math.floor(new Date(wavePattern.wave1_end_time).getTime() / 1000),
+            Math.floor(new Date(wavePattern.wave2_end_time).getTime() / 1000),
+            Math.floor(new Date(wavePattern.wave3_end_time).getTime() / 1000),
+            Math.floor(new Date(wavePattern.wave4_end_time).getTime() / 1000),
+            wavePattern.wave5_end_time
+              ? Math.floor(
+                  new Date(wavePattern.wave5_end_time).getTime() / 1000,
+                )
+              : data[data.length - 1].time,
+            // Add ABC wave timestamps if they exist
+            ...(wavePattern.wave_a_end_time
+              ? [
+                  Math.floor(
+                    new Date(wavePattern.wave_a_end_time).getTime() / 1000,
+                  ),
+                ]
+              : []),
+            ...(wavePattern.wave_b_end_time
+              ? [
+                  Math.floor(
+                    new Date(wavePattern.wave_b_end_time).getTime() / 1000,
+                  ),
+                ]
+              : []),
+            ...(wavePattern.wave_c_end_time
+              ? [
+                  Math.floor(
+                    new Date(wavePattern.wave_c_end_time).getTime() / 1000,
+                  ),
+                ]
+              : []),
+          ];
+
           // Add wave lines connecting start and end points
-          wavePoints.forEach(({ start, end }, index) => {
-            // Different styling for impulse vs corrective waves
-            const isCorrectiveWave = ["A", "B", "C"].includes(start.label);
+          wavePoints.forEach(({ start, end, isImpulse }, index) => {
+            console.log(`Drawing wave ${start.label}:`, {
+              start,
+              end,
+              isImpulse,
+            });
+
             const waveLine = chart.addLineSeries({
-              color: isCorrectiveWave ? "#ec4899" : "#8b5cf6", // Pink for ABC, Purple for 12345
-              lineWidth: isCorrectiveWave ? 1.5 : 2,
-              lineStyle: isCorrectiveWave ? 2 : 0, // Dashed for ABC waves
+              color: isImpulse ? "#22c55e" : "#ef4444", // Green for impulse, Red for corrective
+              lineWidth: 2,
+              lineStyle: 0,
               title: `Wave ${start.label}`,
               lastValueVisible: false,
             });
@@ -213,18 +254,15 @@ const TradingViewChart = ({
               ]);
 
               // Add wave number marker at the end of each wave
-              const markerColor = "#8b5cf6";
-              const textColor = "white";
-              const isCorrectiveWave = ["A", "B", "C"].includes(start.label);
               waveLine.setMarkers([
                 {
                   time: timePoints[index + 1],
-                  position: isCorrectiveWave ? "belowBar" : "aboveBar",
-                  color: isCorrectiveWave ? "#ec4899" : "#8b5cf6",
-                  shape: isCorrectiveWave ? "square" : "circle",
-                  text: start.label,
-                  size: isCorrectiveWave ? 0.8 : 1,
-                  textColor: textColor,
+                  position: isImpulse ? "aboveBar" : "belowBar",
+                  color: isImpulse ? "#22c55e" : "#ef4444",
+                  shape: "circle",
+                  text: end.label,
+                  size: 1,
+                  textColor: "white",
                 },
               ]);
             }
