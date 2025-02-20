@@ -84,15 +84,28 @@ export class YahooFinanceService {
   static async updateAllStocks() {
     const symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]; // Add more symbols as needed
 
-    for (const symbol of symbols) {
-      try {
-        await this.fetchHistoricalData(symbol, "1d");
-        // Add a delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error(`Error updating ${symbol}:`, error);
-        continue;
+    try {
+      // First, clear existing data
+      console.log("Clearing existing data...");
+      await supabase.from("wave_patterns").delete().neq("id", "dummy");
+      await supabase.from("stock_prices").delete().neq("symbol", "dummy");
+      await supabase.from("stocks").delete().neq("symbol", "dummy");
+      console.log("Existing data cleared");
+
+      // Then fetch new data for each symbol
+      for (const symbol of symbols) {
+        try {
+          await this.fetchHistoricalData(symbol, "1d");
+          // Add a delay to avoid rate limiting
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } catch (error) {
+          console.error(`Error updating ${symbol}:`, error);
+          continue;
+        }
       }
+    } catch (error) {
+      console.error("Error in updateAllStocks:", error);
+      throw error;
     }
   }
 }

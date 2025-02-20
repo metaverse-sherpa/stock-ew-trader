@@ -117,22 +117,44 @@ export class WavePatternService {
         let isHigh = true;
         let isLow = true;
 
-        // Check if this is a pivot high or low
-        for (let j = i - lookback; j <= i + lookback; j++) {
-          if (j === i) continue;
-          if (prices[j].high > prices[i].high) isHigh = false;
-          if (prices[j].low < prices[i].low) isLow = false;
+        // Check left side of the window
+        let isHighLeft = true;
+        let isLowLeft = true;
+        for (let j = i - lookback; j < i; j++) {
+          if (prices[j].high > prices[i].high) isHighLeft = false;
+          if (prices[j].low < prices[i].low) isLowLeft = false;
         }
 
-        if (isHigh || isLow) {
+        // Check right side of the window
+        let isHighRight = true;
+        let isLowRight = true;
+        for (let j = i + 1; j <= i + lookback; j++) {
+          if (prices[j].high > prices[i].high) isHighRight = false;
+          if (prices[j].low < prices[i].low) isLowRight = false;
+        }
+
+        // A point is a pivot if it's highest/lowest on either side
+        const isPivotHigh = isHighLeft && isHighRight;
+        const isPivotLow = isLowLeft && isLowRight;
+
+        if (isPivotHigh || isPivotLow) {
           const existingPivot = pivots.find(
             (p) => p.timestamp === prices[i].timestamp,
           );
-          if (!existingPivot) {
+          // If we already have this pivot, only update if current lookback is smaller
+          if (!existingPivot || lookback < existingPivot.lookback) {
+            if (existingPivot) {
+              // Remove existing pivot
+              const index = pivots.findIndex(
+                (p) => p.timestamp === prices[i].timestamp,
+              );
+              pivots.splice(index, 1);
+            }
             pivots.push({
-              price: isHigh ? prices[i].high : prices[i].low,
+              price: isPivotHigh ? prices[i].high : prices[i].low,
               timestamp: prices[i].timestamp,
-              isHigh,
+              isHigh: isPivotHigh,
+              lookback, // Store the lookback period that found this pivot
             });
           }
         }
@@ -264,9 +286,12 @@ export class WavePatternService {
     // Wave 5 should be developing and moving in the right direction
     if (wave5Move <= 0) return false;
 
-    // Wave 5 shouldn't be extended too far (typical max is 1.618 * Wave 1)
+    // Wave 5 can extend beyond Wave 1, but we'll use 2.618 as an absolute maximum
     const wave1Size = pattern.wave1_end.price - pattern.wave1_start.price;
-    if (wave5Move > wave1Size * 1.618) return false;
+    if (wave5Move > wave1Size * 2.618) return false;
+
+    // NEW RULE: Wave 5 cannot dip below where Wave 4 started (Wave 3 end)
+    if (currentPrice < pattern.wave4_start) return false;
 
     return true;
   }

@@ -46,8 +46,13 @@ const TradingViewChart = ({
       return;
     }
 
-    // Use all prices if no wave pattern exists
-    const filteredPrices = prices;
+    // Filter prices to only show from Wave 1 start date if we have a wave pattern
+    const filteredPrices = wavePattern?.wave1_start_time
+      ? prices.filter(
+          (price) =>
+            new Date(price.timestamp) >= new Date(wavePattern.wave1_start_time),
+        )
+      : prices;
 
     // Clean up existing chart before creating a new one
     if (chartRef.current) {
