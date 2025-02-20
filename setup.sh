@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "5173:5173"
     volumes:
       - .:/app
       - /app/node_modules
@@ -63,7 +63,7 @@ COPY . .
 RUN chmod -R 755 scripts/
 RUN chmod -R 755 node_modules/.bin/
 
-EXPOSE 3000
+EXPOSE 5173
 
 CMD ["npm", "run", "dev"]
 EOL
@@ -106,7 +106,7 @@ Setup completed successfully!
 Next steps:
 1. Copy .env.example to .env and update with your Supabase credentials
 2. Run 'docker compose exec app npm run seed' to populate the database
-3. Visit http://localhost:3000 in your browser
+3. Visit http://localhost:5173 in your browser
 
 To view logs, run: docker compose logs -f
 "

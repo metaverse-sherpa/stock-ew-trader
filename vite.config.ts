@@ -31,5 +31,7 @@ export default defineConfig({
   server: {
     // @ts-ignore
     allowedHosts: true,
+    port: 3002,
+    host: true
   }
 });
