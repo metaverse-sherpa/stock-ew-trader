@@ -1,0 +1,80 @@
+Elliott Wave Stock Analysis & Prediction Platform - Build Prompts
+
+1. Initial Setup
+"Create a new Vite React TypeScript project with ShadCN UI components and set up the basic project structure. Include tailwind and the required Tempo platform setup."
+
+2. Types and Database Schema
+"Create the basic types for the application including Stock, StockPrice, WavePattern, and Timeframe. Also create the database schema for Supabase."
+
+3. Core Services
+"Create the YahooFinanceService to fetch historical stock data from Yahoo Finance API. Include methods for fetching and storing data in Supabase."
+
+"Create the WavePatternService for Elliott Wave analysis. Include methods for finding pivot points and wave patterns using the Elliott Wave rules."
+
+4. UI Components - Base Layout
+"Create the DashboardHeader component with search, timeframe selection, and theme toggle."
+
+"Create the Home component as the main layout with the dashboard header and content area."
+
+5. Stock Grid and Card
+"Create the StockGrid component to display a grid of stock cards with pagination and filtering."
+
+"Create the StockCard component with a mini chart, price info, and wave status display using lightweight-charts."
+
+6. Detailed View Components
+"Create the DetailedStockView dialog component for showing detailed stock analysis."
+
+"Create the TradingViewChart component using lightweight-charts. Include Elliott Wave pattern visualization and Fibonacci projections."
+
+"Create the AIPredictions component to show price targets and confidence levels."
+
+7. Settings and Configuration
+"Create the SettingsDialog component for managing timeframes and analysis settings."
+
+"Create the LoadingDialog component for showing loading states."
+
+8. Data Hooks
+"Create the useStocks hook for fetching and managing stock data with real-time updates."
+
+"Create the useStockDetail hook for managing detailed stock view data."
+
+9. Analysis Scripts
+"Create the analysis scripts for running wave pattern detection and data seeding."
+
+10. Final Integration
+"Integrate all components and add real-time updates using Supabase subscriptions."
+
+Additional Tips:
+- Always use ShadCN components for UI elements
+- Ensure all components have proper TypeScript types
+- Use Tailwind for styling
+- Follow proper folder structure:
+  - src/components/
+  - src/lib/services/
+  - src/lib/hooks/
+  - src/lib/types.ts
+  - scripts/
+
+Environment Variables Needed:
+- VITE_SUPABASE_URL
+- VITE_SUPABASE_ANON_KEY
+- VITE_BASE_PATH
+- VITE_TEMPO
+
+Supabase Tables Required:
+- stocks
+- stock_prices
+- wave_patterns
+- user_settings
+
+Key Features to Implement:
+1. Real-time stock data updates
+2. Elliott Wave pattern detection
+3. Fibonacci projection calculations
+4. Interactive charts with wave visualization
+5. Confidence scoring system
+6. Multiple timeframe analysis (1h, 4h, 1d)
+7. Wave status tracking (Wave 1-5, A-B-C)
+8. Price target predictions
+
+Note: Each prompt should be run sequentially as components depend on each other. Some prompts may need to be broken down into smaller steps depending on the complexity of the implementation.
