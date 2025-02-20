@@ -220,62 +220,80 @@ const TradingViewChart = ({
               : []),
           ];
 
-          // Add target price projections if we're in Wave 5 Bullish
-          if (wavePattern.status === "Wave 5 Bullish" && data.length > 0) {
-            const lastTime = data[data.length - 1].time;
-            const currentPrice = wavePattern.current_price;
-            const projectionStartTime = Math.floor(new Date().getTime() / 1000);
+          // Add target price projections based on wave status
+          if (
+            (wavePattern.status === "Wave 5 Bullish" ||
+              wavePattern.status === "Wave B") &&
+            data.length > 0
+          ) {
+            // For Wave B, we'll use different targets and starting point
+            const isWaveB = wavePattern.status === "Wave B";
+            const startPrice = isWaveB
+              ? wavePattern.wave_b_start
+              : wavePattern.wave4_end;
+            const startTime = isWaveB
+              ? wavePattern.wave_a_end_time
+              : wavePattern.wave4_end_time;
 
-            // Add projection lines for each target
-            const targetLines = [
-              {
-                price: wavePattern.target_price1,
-                color: "#22c55e",
-                label: "Target 1",
-              },
-              {
-                price: wavePattern.target_price2,
-                color: "#8b5cf6",
-                label: "Target 2",
-              },
-              {
-                price: wavePattern.target_price3,
-                color: "#ec4899",
-                label: "Target 3",
-              },
-            ];
-
-            targetLines.forEach(({ price, color, label }) => {
-              const projectionLine = chart.addLineSeries({
-                color: color,
-                lineWidth: 1,
-                lineStyle: 2, // Dashed
-                title: label,
-              });
-
-              // Draw line from Wave 5 start (Wave 4 end) to target
-              const wave5StartTime = Math.floor(
-                new Date(wavePattern.wave4_end_time).getTime() / 1000,
+            // Only show predictions if we have a valid start point
+            if (startPrice && startTime) {
+              const lastTime = data[data.length - 1].time;
+              const currentPrice = wavePattern.current_price;
+              const projectionStartTime = Math.floor(
+                new Date().getTime() / 1000,
               );
-              projectionLine.setData([
-                { time: wave5StartTime, value: wavePattern.wave4_end },
-                { time: wave5StartTime + 86400 * 90, value: price }, // Project 90 days ahead
-              ]);
 
-              // Add price label
-              projectionLine.setMarkers([
+              // Add projection lines for each target
+              const targetLines = [
                 {
-                  time: wave5StartTime + 86400 * 90,
-                  position: "right",
-                  color: color,
-                  shape: "circle",
-                  text: `${price.toFixed(2)}`,
-                  size: 1,
+                  price: wavePattern.target_price1,
+                  color: "#22c55e",
+                  label: "Target 1",
                 },
-              ]);
+                {
+                  price: wavePattern.target_price2,
+                  color: "#8b5cf6",
+                  label: "Target 2",
+                },
+                {
+                  price: wavePattern.target_price3,
+                  color: "#ec4899",
+                  label: "Target 3",
+                },
+              ];
 
-              waveSeriesRef.current.push(projectionLine);
-            });
+              targetLines.forEach(({ price, color, label }) => {
+                const projectionLine = chart.addLineSeries({
+                  color: color,
+                  lineWidth: 1,
+                  lineStyle: 2, // Dashed
+                  title: label,
+                });
+
+                // Draw line from wave start to target
+                const waveStartTime = Math.floor(
+                  new Date(startTime).getTime() / 1000,
+                );
+                projectionLine.setData([
+                  { time: waveStartTime, value: startPrice },
+                  { time: waveStartTime + 86400 * 90, value: price }, // Project 90 days ahead
+                ]);
+
+                // Add price label
+                projectionLine.setMarkers([
+                  {
+                    time: waveStartTime + 86400 * 90,
+                    position: "right",
+                    color: color,
+                    shape: "circle",
+                    text: `${price.toFixed(2)}`,
+                    size: 1,
+                  },
+                ]);
+
+                waveSeriesRef.current.push(projectionLine);
+              });
+            }
           }
 
           // Add wave lines connecting start and end points

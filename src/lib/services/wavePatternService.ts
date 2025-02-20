@@ -206,9 +206,14 @@ export class WavePatternService {
       (p) => p.high === highestPrice,
     );
 
-    // Wave 5 must exceed Wave 3's high to be considered complete
+    // Wave 5 must exceed Wave 3's high
     if (highestPrice <= pattern.wave3_end) {
-      // Wave 5 is still in progress
+      // If we haven't exceeded Wave 3's high, this isn't a valid pattern
+      return false;
+    }
+
+    // Wave 5 is still in progress if current price hasn't exceeded Wave 3
+    if (currentPrice <= pattern.wave3_end) {
       pattern.status = "Wave 5 Bullish";
       return true;
     }
@@ -235,6 +240,15 @@ export class WavePatternService {
           (p) => p.low === lowestAfterHigh,
         )?.timestamp;
 
+        // Calculate Wave A targets (typically retracement levels of Wave 5)
+        const wave5Size = highestPrice - pattern.wave4_end;
+        if (wave5Size > 0) {
+          pattern.target_price1 = highestPrice - wave5Size * 0.618; // 61.8% retracement
+          pattern.target_price2 = highestPrice - wave5Size * 0.786; // 78.6% retracement
+          pattern.target_price3 = highestPrice - wave5Size; // 100% retracement
+          pattern.status = "Wave A";
+        }
+
         // Look for Wave B (retracement up)
         const waveAEndIndex = pricesAfterHigh.findIndex(
           (p) => p.low === lowestAfterHigh,
@@ -256,6 +270,15 @@ export class WavePatternService {
             pattern.wave_b_end_time = pricesAfterA.find(
               (p) => p.high === waveBHigh,
             )?.timestamp;
+
+            // Calculate Wave B targets (typically retracement levels of Wave A)
+            const waveASize = pattern.wave_a_start - pattern.wave_a_end;
+            if (waveASize > 0) {
+              pattern.target_price1 = pattern.wave_a_end + waveASize * 0.618; // 61.8% retracement
+              pattern.target_price2 = pattern.wave_a_end + waveASize * 0.786; // 78.6% retracement
+              pattern.target_price3 = pattern.wave_a_end + waveASize; // 100% retracement
+              pattern.status = "Wave B";
+            }
 
             // Look for Wave C (move down)
             const waveBEndIndex = pricesAfterA.findIndex(
