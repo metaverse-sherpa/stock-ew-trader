@@ -84,7 +84,7 @@ export class WavePatternService {
             const { error: insertError } = await supabase
               .from("wave_patterns")
               .insert({
-                id: generateUUID(), // Add UUID for the id field
+                id: generateUUID(),
                 symbol: stock.symbol,
                 timeframe,
                 exchange: stock.exchange,
@@ -143,7 +143,7 @@ export class WavePatternService {
   private static findPivotPoints(prices: StockPrice[]) {
     const pivots: Array<{ price: number; timestamp: string; isHigh: boolean }> =
       [];
-    const lookback = 3; // Number of bars to look back/forward
+    const lookback = 5; // Increased lookback for more significant pivots
 
     for (let i = lookback; i < prices.length - lookback; i++) {
       const currentHigh = prices[i].high;
@@ -193,106 +193,86 @@ export class WavePatternService {
     currentPrice: number,
     prices: StockPrice[],
   ): boolean {
-    // First check: Has price fallen below Wave 1 start at any point?
-    const wave1StartPrice = pattern.wave1_start.price;
+    // Check if Wave 4 has retraced into Wave 1 territory
+    if (pattern.wave4_end <= pattern.wave1_end) return false;
+
+    // Find Wave 5 high point
     const wave4EndIndex = prices.findIndex(
-      (p) => p.timestamp === pattern.wave4_end.timestamp,
+      (p) => p.timestamp === pattern.wave4_end_time,
     );
-    const pricesSinceWave1 = prices.slice(wave4EndIndex);
-
-    // If price has fallen below Wave 1 start at any point, invalidate the pattern
-    const hasInvalidated = pricesSinceWave1.some(
-      (p) => p.low < wave1StartPrice,
-    );
-    if (hasInvalidated) return false;
-
-    // Find all prices since Wave 4 ended
     const pricesSinceWave4 = prices.slice(wave4EndIndex);
-
-    // Find the highest price since Wave 4 ended
     const highestPrice = Math.max(...pricesSinceWave4.map((p) => p.high));
     const highestPriceIndex = pricesSinceWave4.findIndex(
       (p) => p.high === highestPrice,
     );
 
-    // Find the lowest price after the highest point
+    // Wave 5 must exceed Wave 3's high to be considered complete
+    if (highestPrice <= pattern.wave3_end) {
+      // Wave 5 is still in progress
+      pattern.status = "Wave 5 Bullish";
+      return true;
+    }
+
+    // Wave 5 should be at least 0.618 times Wave 1
+    const wave1Size = pattern.wave1_end - pattern.wave1_start;
+    const wave5Size = highestPrice - pattern.wave4_end;
+    if (wave5Size < wave1Size * 0.618) return false;
+
+    // Check for ABC correction after Wave 5
     const pricesAfterHigh = pricesSinceWave4.slice(highestPriceIndex);
-    const lowestAfterHigh = Math.min(...pricesAfterHigh.map((p) => p.low));
+    if (pricesAfterHigh.length >= 5) {
+      const lowestAfterHigh = Math.min(...pricesAfterHigh.map((p) => p.low));
+      const retracement = highestPrice - lowestAfterHigh;
+      const retracementPercent = (retracement / wave5Size) * 100;
 
-    // Calculate Wave 5 size and retracement
-    const wave5Size = highestPrice - pattern.wave4_end.price;
-    const retracement = highestPrice - lowestAfterHigh;
-    const retracementPercent = (retracement / wave5Size) * 100;
-
-    // Consider Wave 5 complete if:
-    // 1. We've retraced more than 23.6% of Wave 5
-    // 2. The retracement has lasted at least 3 bars
-    // 3. The current price is below the high
-    const isWave5Complete =
-      retracementPercent > 23.6 &&
-      pricesAfterHigh.length >= 3 &&
-      currentPrice < highestPrice;
-
-    if (isWave5Complete) {
-      // Start looking for ABC waves
-      pattern.wave5_end = highestPrice;
-      pattern.wave5_end_time = pricesSinceWave4.find(
-        (p) => p.high === highestPrice,
-      )?.timestamp;
-      pattern.wave_a_start = highestPrice;
-
-      // Look for Wave A end within 8 bars after Wave 5 peak
-      const wave5EndIndex = prices.findIndex(
-        (p) => p.timestamp === pattern.wave5_end_time,
-      );
-      const pricesForWaveA = prices.slice(wave5EndIndex, wave5EndIndex + 8);
-      const waveLow = Math.min(...pricesForWaveA.map((p) => p.low));
-      const waveLowIndex = pricesForWaveA.findIndex((p) => p.low === waveLow);
-
-      if (waveLow < pattern.wave4_end) {
-        pattern.wave_a_end = waveLow;
-        pattern.wave_a_end_time = prices.find(
-          (p) => p.low === waveLow,
+      // If we've retraced more than 38.2% of Wave 5, consider it complete
+      if (retracementPercent > 38.2) {
+        pattern.wave5_end = highestPrice;
+        pattern.wave5_end_time = pricesSinceWave4[highestPriceIndex].timestamp;
+        pattern.wave_a_start = highestPrice;
+        pattern.wave_a_end = lowestAfterHigh;
+        pattern.wave_a_end_time = pricesAfterHigh.find(
+          (p) => p.low === lowestAfterHigh,
         )?.timestamp;
 
-        // Look for Wave B (retracement up) within next 4-8 bars
-        const waveAEndIndex = wave5EndIndex + waveLowIndex;
-        const pricesAfterA = prices.slice(waveAEndIndex, waveAEndIndex + 8);
-
-        if (pricesAfterA.length > 0) {
-          pattern.wave_b_start = waveLow;
+        // Look for Wave B (retracement up)
+        const waveAEndIndex = pricesAfterHigh.findIndex(
+          (p) => p.low === lowestAfterHigh,
+        );
+        const pricesAfterA = pricesAfterHigh.slice(waveAEndIndex);
+        if (pricesAfterA.length >= 3) {
           const waveBHigh = Math.max(...pricesAfterA.map((p) => p.high));
-          const waveBHighIndex = pricesAfterA.findIndex(
-            (p) => p.high === waveBHigh,
-          );
-
-          // Wave B should retrace at least 38.2% of Wave A
-          const waveASize = pattern.wave_a_start - waveLow;
-          const waveBRetracement = waveBHigh - waveLow;
+          const waveASize = pattern.wave_a_start - lowestAfterHigh;
+          const waveBRetracement = waveBHigh - lowestAfterHigh;
           const waveBRetracementPercent = (waveBRetracement / waveASize) * 100;
 
-          if (waveBRetracement >= waveASize * 0.382) {
+          // Wave B should retrace at least 38.2% but not more than 78.6% of Wave A
+          if (
+            waveBRetracementPercent >= 38.2 &&
+            waveBRetracementPercent <= 78.6
+          ) {
+            pattern.wave_b_start = lowestAfterHigh;
             pattern.wave_b_end = waveBHigh;
-            pattern.wave_b_end_time = pricesAfterA[waveBHighIndex].timestamp;
+            pattern.wave_b_end_time = pricesAfterA.find(
+              (p) => p.high === waveBHigh,
+            )?.timestamp;
 
-            // Look for Wave C (move down) within next 4-8 bars after Wave B
-            const waveBEndIndex = waveAEndIndex + waveBHighIndex;
-            const pricesAfterB = prices.slice(waveBEndIndex, waveBEndIndex + 8);
-
-            if (pricesAfterB.length > 0) {
-              pattern.wave_c_start = waveBHigh;
+            // Look for Wave C (move down)
+            const waveBEndIndex = pricesAfterA.findIndex(
+              (p) => p.high === waveBHigh,
+            );
+            const pricesAfterB = pricesAfterA.slice(waveBEndIndex);
+            if (pricesAfterB.length >= 3) {
               const waveCLow = Math.min(...pricesAfterB.map((p) => p.low));
-              const waveCLowIndex = pricesAfterB.findIndex(
-                (p) => p.low === waveCLow,
-              );
+              const waveCSize = waveBHigh - waveCLow;
 
               // Wave C should be at least as long as Wave A
-              const waveCSize = waveBHigh - waveCLow;
-              const waveCPercent = (waveCSize / waveASize) * 100;
-
-              if (waveCSize >= waveASize * 0.618) {
+              if (waveCSize >= waveASize) {
+                pattern.wave_c_start = waveBHigh;
                 pattern.wave_c_end = waveCLow;
-                pattern.wave_c_end_time = pricesAfterB[waveCLowIndex].timestamp;
+                pattern.wave_c_end_time = pricesAfterB.find(
+                  (p) => p.low === waveCLow,
+                )?.timestamp;
                 pattern.status = "Completed";
               }
             }
@@ -303,17 +283,11 @@ export class WavePatternService {
     }
 
     // If Wave 5 isn't complete, check if it's still valid
-    const wave5Move = currentPrice - pattern.wave5_start;
-
-    // Wave 5 should be moving in the right direction
+    const wave5Move = currentPrice - pattern.wave4_end;
     if (wave5Move <= 0) return false;
 
-    // Wave 5 can extend beyond Wave 1, but we'll use 2.618 as an absolute maximum
-    const wave1Size = pattern.wave1_end - pattern.wave1_start;
+    // Wave 5 shouldn't extend beyond 2.618 times Wave 1
     if (wave5Move > wave1Size * 2.618) return false;
-
-    // Wave 5 cannot dip below where Wave 4 started
-    if (currentPrice < pattern.wave4_start) return false;
 
     return true;
   }
@@ -325,190 +299,141 @@ export class WavePatternService {
     const patterns = [];
     if (!prices?.length) return patterns;
 
-    // Limit the number of patterns to analyze
     const MAX_PATTERNS = 10;
-    const MAX_LOOKBACK = 50; // Only look at recent pivots
-
-    // Use recent pivots only
+    const MAX_LOOKBACK = 100; // Increased lookback for longer-term patterns
     pivots = pivots.slice(-MAX_LOOKBACK);
 
     const minWaveSize =
-      (prices[prices.length - 1].close - prices[0].close) * 0.01; // 1% of total range
+      (prices[prices.length - 1].close - prices[0].close) * 0.02; // 2% of total range
 
-    // Find all potential Wave 1 starts (significant lows)
-    const potentialStarts = [];
+    // Find potential Wave 1 starts (significant lows)
     for (let i = 0; i < pivots.length - 20; i++) {
       if (!pivots[i].isHigh) {
-        // Only consider lows for Wave 1 starts
-        potentialStarts.push(i);
-      }
-    }
+        // Check if price ever goes below this potential Wave 1 start
+        const wave1StartTime = pivots[i].timestamp;
+        const wave1StartIndex = prices.findIndex(
+          (p) => p.timestamp === wave1StartTime,
+        );
+        const pricesAfterWave1Start = prices.slice(wave1StartIndex);
+        const invalidated = pricesAfterWave1Start.some(
+          (p) => p.low < pivots[i].price,
+        );
+        if (invalidated) continue;
 
-    // For each potential start, check if price ever goes below that point
-    // If it does, invalidate all waves before that point and start fresh
-    let validStarts = [];
-    for (const startIndex of potentialStarts) {
-      const startPrice = pivots[startIndex].price;
-      const startTime = new Date(pivots[startIndex].timestamp).getTime();
+        let pattern = {
+          wave1_start: pivots[i].price,
+          wave1_start_time: pivots[i].timestamp,
+          wave1_end: null,
+          wave1_end_time: null,
+          wave2_end: null,
+          wave2_end_time: null,
+          wave3_end: null,
+          wave3_end_time: null,
+          wave4_end: null,
+          wave4_end_time: null,
+          wave5_start: null,
+          wave5_end: null,
+          wave5_end_time: null,
+          status: "Wave 1" as WaveStatus,
+          confidence: 0,
+        };
 
-      // Check all future prices
-      let isValid = true;
-      for (let j = startIndex + 1; j < pivots.length; j++) {
-        if (pivots[j].price < startPrice) {
-          // Found a new low - invalidate this wave count
-          isValid = false;
-          break;
-        }
-      }
+        // Look for Wave 1 end (next significant high)
+        for (let j = i + 1; j < pivots.length; j++) {
+          if (pivots[j].isHigh) {
+            pattern.wave1_end = pivots[j].price;
+            pattern.wave1_end_time = pivots[j].timestamp;
+            const wave1Size = pattern.wave1_end - pattern.wave1_start;
 
-      if (isValid) {
-        validStarts.push(startIndex);
-      }
-    }
+            if (wave1Size < minWaveSize) continue;
 
-    // Take only the most recent valid starts
-    validStarts = validStarts.slice(-MAX_PATTERNS);
+            // Look for Wave 2 end (next significant low)
+            for (let k = j + 1; k < pivots.length; k++) {
+              if (!pivots[k].isHigh) {
+                const wave2End = pivots[k].price;
+                if (wave2End <= pattern.wave1_start) continue; // Wave 2 can't go below Wave 1 start
 
-    // For each valid start point, look for wave patterns
-    for (const startIndex of validStarts) {
-      // Initialize base pattern
-      let pattern = {
-        wave1_start: pivots[startIndex].price,
-        wave1_start_time: pivots[startIndex].timestamp,
-        wave1_end: pivots[startIndex].price, // Set initial end same as start
-        wave1_end_time: pivots[startIndex].timestamp,
-        wave2_start: pivots[startIndex].price,
-        wave2_end: pivots[startIndex].price,
-        wave3_start: pivots[startIndex].price,
-        wave2_end_time: pivots[startIndex].timestamp,
-        wave3_end: pivots[startIndex].price,
-        wave3_end_time: pivots[startIndex].timestamp,
-        wave4_start: pivots[startIndex].price,
-        wave4_end: pivots[startIndex].price,
-        wave4_end_time: pivots[startIndex].timestamp,
-        wave5_start: pivots[startIndex].price,
-        wave5_end: null,
-        wave5_end_time: null,
-        wave_a_start: null,
-        wave_a_end: null,
-        wave_a_end_time: null,
-        wave_b_start: null,
-        wave_b_end: null,
-        wave_b_end_time: null,
-        wave_c_start: null,
-        wave_c_end: null,
-        wave_c_end_time: null,
-        status: "Wave 1" as WaveStatus,
-        confidence: 0,
-        current_price: prices[prices.length - 1].close,
-        target_price1: pivots[startIndex].price,
-        target_price2: pivots[startIndex].price,
-        target_price3: pivots[startIndex].price,
-      };
+                pattern.wave2_end = wave2End;
+                pattern.wave2_end_time = pivots[k].timestamp;
+                const wave2Size = pattern.wave1_end - wave2End;
 
-      // Save Wave 1 start
-      patterns.push({ ...pattern });
+                // Wave 2 should retrace between 38.2% and 78.6% of Wave 1
+                const wave2Retracement = (wave2Size / wave1Size) * 100;
+                if (wave2Retracement < 38.2 || wave2Retracement > 78.6)
+                  continue;
 
-      // Look for Wave 1 end (next high after start)
-      for (let i = startIndex + 1; i < pivots.length; i++) {
-        if (pivots[i].isHigh) {
-          pattern.wave1_end = pivots[i].price;
-          pattern.wave1_end_time = pivots[i].timestamp;
-          const wave1Size = pattern.wave1_end - pattern.wave1_start;
+                // Look for Wave 3 end (next significant high)
+                for (let l = k + 1; l < pivots.length; l++) {
+                  if (pivots[l].isHigh) {
+                    const wave3End = pivots[l].price;
+                    const wave3Size = wave3End - pattern.wave2_end;
 
-          // Wave 1 must be significant
-          if (wave1Size < minWaveSize) continue;
+                    // Wave 3 must be at least 1.618 times Wave 1
+                    if (wave3Size < wave1Size * 1.618) continue;
 
-          // Update and save Wave 1 completion
-          pattern.status = "Wave 2";
-          patterns.push({ ...pattern });
+                    // Wave 3 must be the highest point so far
+                    const isHighestPoint = pivots
+                      .slice(i, l + 1)
+                      .every((pivot) => pivot.price <= wave3End);
+                    if (!isHighestPoint) continue;
 
-          // Look for Wave 2 end (next low after Wave 1 end)
-          for (let j = i + 1; j < pivots.length; j++) {
-            if (!pivots[j].isHigh) {
-              pattern.wave2_end = pivots[j].price;
-              pattern.wave2_end_time = pivots[j].timestamp;
+                    pattern.wave3_end = wave3End;
+                    pattern.wave3_end_time = pivots[l].timestamp;
 
-              // Wave 2 cannot go below Wave 1 start
-              if (pattern.wave2_end <= pattern.wave1_start) break;
+                    // Look for Wave 4 end (next significant low)
+                    for (let m = l + 1; m < pivots.length; m++) {
+                      if (!pivots[m].isHigh) {
+                        const wave4End = pivots[m].price;
 
-              // Update and save Wave 2 completion
-              pattern.status = "Wave 3";
-              patterns.push({ ...pattern });
+                        // Wave 4 must end lower than where it started (Wave 3 end)
+                        if (wave4End >= wave3End) continue;
 
-              // Look for Wave 3 end (next high after Wave 2)
-              for (let k = j + 1; k < pivots.length; k++) {
-                if (pivots[k].isHigh) {
-                  pattern.wave3_end = pivots[k].price;
-                  pattern.wave3_end_time = pivots[k].timestamp;
+                        // Wave 4 must retrace at least 23.6% but not more than 38.2% of Wave 3
+                        const wave4Retracement =
+                          ((wave3End - wave4End) / wave3Size) * 100;
+                        if (wave4Retracement < 23.6 || wave4Retracement > 38.2)
+                          continue;
 
-                  // Wave 3 must be longer than Wave 1
-                  const wave3Size = pattern.wave3_end - pattern.wave2_end;
-                  if (wave3Size <= wave1Size) break;
+                        pattern.wave4_end = wave4End;
+                        pattern.wave4_end_time = pivots[m].timestamp;
+                        pattern.wave5_start = wave4End;
+                        pattern.status = "Wave 5 Bullish";
 
-                  // Update and save Wave 3 completion
-                  pattern.status = "Wave 4";
-                  patterns.push({ ...pattern });
+                        // Calculate Wave 5 target prices using Fibonacci extensions
+                        // Wave 5 targets are measured from Wave 4 end, using Wave 1 size
+                        // Common Fibonacci extension levels for Wave 5: 1.618, 2.618, 4.236
+                        const wave5StartPrice = wave4End;
+                        pattern.target_price1 =
+                          wave5StartPrice + wave1Size * 1.618; // Minimum target (161.8%)
+                        pattern.target_price2 =
+                          wave5StartPrice + wave1Size * 2.618; // Typical target (261.8%)
+                        pattern.target_price3 =
+                          wave5StartPrice + wave1Size * 4.236; // Extended target (423.6%)
 
-                  // Look for Wave 4 end (next low after Wave 3)
-                  for (let l = k + 1; l < pivots.length; l++) {
-                    if (!pivots[l].isHigh) {
-                      pattern.wave4_end = pivots[l].price;
-                      pattern.wave4_end_time = pivots[l].timestamp;
+                        // Calculate confidence score
+                        const confidenceFactors = [
+                          wave3Size > wave1Size * 1.618 ? 20 : 10, // Extended Wave 3
+                          wave4Retracement < 38.2 ? 20 : 10, // Shallow Wave 4
+                          wave2Retracement > 50 ? 20 : 10, // Deep Wave 2
+                          wave1Size > minWaveSize * 2 ? 20 : 10, // Strong Wave 1
+                          pattern.wave4_end > pattern.wave1_end * 1.1 ? 20 : 10, // Clear trend
+                        ];
+                        pattern.confidence = confidenceFactors.reduce(
+                          (a, b) => a + b,
+                          0,
+                        );
 
-                      // Wave 4 cannot overlap Wave 1
-                      if (pattern.wave4_end <= pattern.wave1_end) break;
-
-                      // Wave 4 retracement should be less than Wave 2
-                      const wave4Size = pattern.wave3_end - pattern.wave4_end;
-                      const wave2Size = pattern.wave1_end - pattern.wave2_end;
-                      if (wave4Size >= wave2Size) break;
-
-                      // Update and save Wave 4 completion
-                      pattern.status = "Wave 5 Bullish";
-                      patterns.push({ ...pattern });
-
-                      // Found a valid Wave 4, now look for Wave 5
-                      pattern.wave5_start = pattern.wave4_end;
-                      pattern.status = "Wave 5 Bullish";
-
-                      // Calculate target prices using Fibonacci extensions
-                      const wave1Size = pattern.wave1_end - pattern.wave1_start;
-                      pattern.target_price1 =
-                        pattern.wave5_start + wave1Size * 0.618; // Conservative
-                      pattern.target_price2 = pattern.wave5_start + wave1Size; // Moderate
-                      pattern.target_price3 =
-                        pattern.wave5_start + wave1Size * 1.618; // Aggressive
-
-                      // Calculate confidence score based on pattern quality
-                      const confidenceFactors = [
-                        wave3Size > wave1Size * 1.618 ? 20 : 10, // Extended Wave 3
-                        wave4Size < wave2Size * 0.618 ? 20 : 10, // Shallow Wave 4
-                        Math.abs(
-                          wave2Size / wave1Size - wave4Size / wave3Size,
-                        ) > 0.3
-                          ? 20
-                          : 10, // Good alternation
-                        wave1Size > minWaveSize * 2 ? 20 : 10, // Strong Wave 1
-                        pattern.wave4_end > pattern.wave1_end * 1.1 ? 20 : 10, // Clear trend
-                      ];
-                      pattern.confidence = confidenceFactors.reduce(
-                        (a, b) => a + b,
-                        0,
-                      );
-
-                      // Check if this Wave 5 pattern is valid
-                      if (
-                        this.isValidWave5Pattern(
-                          pattern,
-                          prices[prices.length - 1].close,
-                          prices,
-                        )
-                      ) {
-                        patterns.push({ ...pattern });
-                        // Exit early if we have enough patterns
-                        if (patterns.length >= MAX_PATTERNS) {
-                          return patterns;
+                        if (
+                          this.isValidWave5Pattern(
+                            pattern,
+                            prices[prices.length - 1].close,
+                            prices,
+                          )
+                        ) {
+                          patterns.push({ ...pattern });
+                          if (patterns.length >= MAX_PATTERNS) {
+                            return patterns;
+                          }
                         }
                       }
                     }

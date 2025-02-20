@@ -15,9 +15,7 @@ interface TradingViewChartProps {
   prices?: StockPrice[];
   wavePattern?: WavePattern | null;
   showElliottWave?: boolean;
-  showFibonacci?: boolean;
   onToggleElliottWave?: (enabled: boolean) => void;
-  onToggleFibonacci?: (enabled: boolean) => void;
   onTimeframeChange?: (timeframe: Timeframe) => void;
 }
 
@@ -27,15 +25,12 @@ const TradingViewChart = ({
   prices = [],
   wavePattern,
   showElliottWave = true,
-  showFibonacci = false,
   onToggleElliottWave = () => {},
-  onToggleFibonacci = () => {},
   onTimeframeChange = () => {},
 }: TradingViewChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const waveSeriesRef = useRef<any[]>([]);
-  const fibSeriesRef = useRef<any[]>([]);
 
   useEffect(() => {
     if (!chartContainerRef.current || !prices?.length) {
@@ -121,11 +116,6 @@ const TradingViewChart = ({
       // Add Elliott Wave markers if enabled, pattern exists, and we have wave data
       if (wavePattern && data.length > 0 && wavePattern.wave1_start) {
         if (showElliottWave) {
-          console.log("Drawing Elliott Wave patterns:", {
-            timeframe,
-            wavePattern,
-          });
-
           console.log("Drawing Elliott Wave patterns:", {
             timeframe,
             wavePattern,
@@ -230,6 +220,64 @@ const TradingViewChart = ({
               : []),
           ];
 
+          // Add target price projections if we're in Wave 5 Bullish
+          if (wavePattern.status === "Wave 5 Bullish" && data.length > 0) {
+            const lastTime = data[data.length - 1].time;
+            const currentPrice = wavePattern.current_price;
+            const projectionStartTime = Math.floor(new Date().getTime() / 1000);
+
+            // Add projection lines for each target
+            const targetLines = [
+              {
+                price: wavePattern.target_price1,
+                color: "#22c55e",
+                label: "Target 1",
+              },
+              {
+                price: wavePattern.target_price2,
+                color: "#8b5cf6",
+                label: "Target 2",
+              },
+              {
+                price: wavePattern.target_price3,
+                color: "#ec4899",
+                label: "Target 3",
+              },
+            ];
+
+            targetLines.forEach(({ price, color, label }) => {
+              const projectionLine = chart.addLineSeries({
+                color: color,
+                lineWidth: 1,
+                lineStyle: 2, // Dashed
+                title: label,
+              });
+
+              // Draw line from Wave 5 start (Wave 4 end) to target
+              const wave5StartTime = Math.floor(
+                new Date(wavePattern.wave4_end_time).getTime() / 1000,
+              );
+              projectionLine.setData([
+                { time: wave5StartTime, value: wavePattern.wave4_end },
+                { time: wave5StartTime + 86400 * 90, value: price }, // Project 90 days ahead
+              ]);
+
+              // Add price label
+              projectionLine.setMarkers([
+                {
+                  time: wave5StartTime + 86400 * 90,
+                  position: "right",
+                  color: color,
+                  shape: "circle",
+                  text: `${price.toFixed(2)}`,
+                  size: 1,
+                },
+              ]);
+
+              waveSeriesRef.current.push(projectionLine);
+            });
+          }
+
           // Add wave lines connecting start and end points
           wavePoints.forEach(({ start, end, isImpulse }, index) => {
             console.log(`Drawing wave ${start.label}:`, {
@@ -269,56 +317,6 @@ const TradingViewChart = ({
             waveSeriesRef.current.push(waveLine);
           });
         }
-
-        // Add Fibonacci retracement levels if enabled
-        if (showFibonacci && wavePattern.wave5_end) {
-          // Fibonacci levels for both impulse and corrective waves
-          const impulseFibLevels = [
-            { level: 0, color: "#ef4444" }, // Start (0%)
-            { level: 0.236, color: "#8b5cf6" }, // 23.6%
-            { level: 0.382, color: "#8b5cf6" }, // 38.2%
-            { level: 0.5, color: "#8b5cf6" }, // 50%
-            { level: 0.618, color: "#8b5cf6" }, // 61.8%
-            { level: 0.786, color: "#8b5cf6" }, // 78.6%
-            { level: 1, color: "#22c55e" }, // Target (100%)
-          ];
-
-          // Additional Fibonacci levels for ABC correction
-          const correctiveFibLevels = [
-            { level: 0.382, color: "#ec4899" }, // 38.2% retracement
-            { level: 0.5, color: "#ec4899" }, // 50% retracement
-            { level: 0.618, color: "#ec4899" }, // 61.8% retracement
-          ];
-
-          const fibLevels = wavePattern.wave_a_start
-            ? correctiveFibLevels
-            : impulseFibLevels;
-
-          const wave4End = wavePattern.wave4_end;
-          const wave5Target = wavePattern.target_price1;
-          const priceRange = wave5Target - wave4End;
-
-          fibLevels.forEach(({ level, color }) => {
-            const price = wave4End + priceRange * level;
-            const fibLine = chart.addLineSeries({
-              color: color,
-              lineWidth: 1,
-              lineStyle: 2, // Dashed
-              title: `Fib ${(level * 100).toFixed(1)}%`,
-            });
-
-            // Create a horizontal line across the visible range
-            const startTime = data[0].time;
-            const endTime = data[data.length - 1].time;
-
-            fibLine.setData([
-              { time: startTime, value: price },
-              { time: endTime, value: price },
-            ]);
-
-            fibSeriesRef.current.push(fibLine);
-          });
-        }
       }
 
       // Fit the content
@@ -334,20 +332,15 @@ const TradingViewChart = ({
           waveSeriesRef.current.forEach((series) => {
             chartRef.current.removeSeries(series);
           });
-          // Clean up fibonacci lines
-          fibSeriesRef.current.forEach((series) => {
-            chartRef.current.removeSeries(series);
-          });
           chartRef.current.remove();
         } catch (error) {
           console.error("Error cleaning up chart:", error);
         }
         waveSeriesRef.current = [];
-        fibSeriesRef.current = [];
         chartRef.current = null;
       }
     };
-  }, [prices, showElliottWave, showFibonacci, wavePattern, timeframe]);
+  }, [prices, showElliottWave, wavePattern, timeframe]);
 
   return (
     <Card className="w-full h-[600px] bg-background p-4">
@@ -378,15 +371,6 @@ const TradingViewChart = ({
               onCheckedChange={onToggleElliottWave}
             />
             <Label htmlFor="elliott-wave">Elliott Wave</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="fibonacci"
-              checked={showFibonacci}
-              onCheckedChange={onToggleFibonacci}
-            />
-            <Label htmlFor="fibonacci">Fibonacci</Label>
           </div>
 
           <div className="flex items-center space-x-2">
