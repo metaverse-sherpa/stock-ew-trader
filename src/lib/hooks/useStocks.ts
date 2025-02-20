@@ -24,6 +24,10 @@ export function useStocks(selectedTimeframe: Timeframe) {
           .select("*");
 
         if (stocksError) throw stocksError;
+        if (!stocks?.length) {
+          setStocks([]);
+          return;
+        }
 
         // Then get wave patterns
         const { data: wavePatterns, error: waveError } = await supabase
@@ -32,12 +36,16 @@ export function useStocks(selectedTimeframe: Timeframe) {
           .in("timeframe", timeframes)
           .order("confidence", { ascending: false });
 
+        if (waveError) throw waveError;
+        if (!wavePatterns?.length) {
+          setStocks([]);
+          return;
+        }
+
         // Create a map of stocks for easy lookup
         const stocksMap = Object.fromEntries(
           stocks.map((stock) => [stock.symbol, stock]),
         );
-
-        if (waveError) throw waveError;
 
         // Then get prices for each stock
         const pricesPromises = wavePatterns.map((pattern) =>

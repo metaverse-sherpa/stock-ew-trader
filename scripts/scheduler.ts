@@ -1,23 +1,37 @@
 import cron from "node-cron";
-import { seedData } from "./seedData";
+import { YahooFinanceService } from "../src/lib/services/yahooFinanceService";
+import { WavePatternService } from "../src/lib/services/wavePatternService";
 
 console.log("Starting scheduler...");
 
-// Run at midnight (00:00) every day
+// Run data fetch at midnight (00:00) every day
 cron.schedule("0 0 * * *", async () => {
-  console.log("Running scheduled data seed job at:", new Date().toISOString());
+  console.log("Running scheduled data fetch at:", new Date().toISOString());
   try {
-    await seedData();
-    console.log("Scheduled data seed completed successfully");
+    await YahooFinanceService.updateAllStocks();
+    console.log("Scheduled data fetch completed successfully");
   } catch (error) {
-    console.error("Error in scheduled data seed:", error);
+    console.error("Error in scheduled data fetch:", error);
   }
 });
 
-// Run immediately on startup
-seedData().catch((error) => {
-  console.error("Error in initial data seed:", error);
+// Run wave analysis at 00:30 every day (after data fetch)
+cron.schedule("30 0 * * *", async () => {
+  console.log("Running scheduled wave analysis at:", new Date().toISOString());
+  try {
+    await WavePatternService.generateAllPatterns();
+    console.log("Scheduled wave analysis completed successfully");
+  } catch (error) {
+    console.error("Error in scheduled wave analysis:", error);
+  }
 });
+
+// Run initial data fetch and analysis
+YahooFinanceService.updateAllStocks()
+  .then(() => WavePatternService.generateAllPatterns())
+  .catch((error) => {
+    console.error("Error in initial setup:", error);
+  });
 
 // Keep the process running
 process.stdin.resume();

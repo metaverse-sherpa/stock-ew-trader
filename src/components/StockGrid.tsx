@@ -18,6 +18,17 @@ const StockGrid = ({
   console.log("StockGrid rendered with timeframe:", timeframe);
   const { stocks, loading, error } = useStocks(timeframe);
 
+  // Hide loading dialog when stocks are loaded
+  React.useEffect(() => {
+    if (onStockSelect) {
+      // Small delay to ensure the grid is rendered
+      const timer = setTimeout(() => {
+        onStockSelect("");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [stocks, onStockSelect]);
+
   React.useEffect(() => {
     console.log("StockGrid timeframe changed:", timeframe);
   }, [timeframe]);
@@ -32,7 +43,10 @@ const StockGrid = ({
   if (loading) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-muted-foreground">Loading stocks...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </Card>
     );
   }
@@ -47,7 +61,7 @@ const StockGrid = ({
     );
   }
 
-  if (filteredStocks.length === 0) {
+  if (!loading && filteredStocks.length === 0) {
     return (
       <Card className="p-8 text-center">
         <p className="text-muted-foreground">

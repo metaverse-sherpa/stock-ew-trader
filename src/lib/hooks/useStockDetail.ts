@@ -18,7 +18,17 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
           .select("*")
           .eq("symbol", symbol)
           .eq("timeframe", timeframe)
+          .order("created_at", { ascending: false })
+          .limit(1)
           .single();
+
+        // Log the pattern data we found
+        console.log("Wave pattern data:", {
+          symbol,
+          timeframe,
+          patternData,
+          patternError,
+        });
 
         // Don't throw on pattern error, just set pattern to null
         if (patternError) {

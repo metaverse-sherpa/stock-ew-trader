@@ -46,13 +46,8 @@ const TradingViewChart = ({
       return;
     }
 
-    // Filter prices to only show from Wave 1 start date if we have a wave pattern
-    const filteredPrices = wavePattern?.wave1_start_time
-      ? prices.filter(
-          (price) =>
-            new Date(price.timestamp) >= new Date(wavePattern.wave1_start_time),
-        )
-      : prices;
+    // Use all prices for the chart
+    const filteredPrices = prices;
 
     // Clean up existing chart before creating a new one
     if (chartRef.current) {
@@ -247,7 +242,7 @@ const TradingViewChart = ({
               color: isImpulse ? "#22c55e" : "#ef4444", // Green for impulse, Red for corrective
               lineWidth: 2,
               lineStyle: 0,
-              title: `Wave ${start.label}`,
+              title: "", // Remove the wave label from the right side
               lastValueVisible: false,
             });
 

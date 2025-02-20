@@ -9,6 +9,7 @@ import { Search, Moon, Sun } from "lucide-react";
 import type { Timeframe } from "@/lib/types";
 
 interface DashboardHeaderProps {
+  children?: React.ReactNode;
   onSearch?: (query: string) => void;
   onTimeframeChange?: (timeframe: Timeframe) => void;
   onThemeToggle?: () => void;
@@ -22,6 +23,7 @@ const DashboardHeader = ({
   onThemeToggle = () => {},
   isDarkMode = true,
   selectedTimeframe = "1h",
+  children,
 }: DashboardHeaderProps) => {
   return (
     <div className="w-full h-[72px] px-6 bg-background border-b border-border flex items-center justify-between">
@@ -67,9 +69,9 @@ const DashboardHeader = ({
             )}
           </Label>
         </div>
-
-        <Button variant="outline">Settings</Button>
       </div>
+
+      <div className="flex items-center space-x-4">{children}</div>
     </div>
   );
 };
