@@ -1,0 +1,81 @@
+Elliott Wave Stock Analysis Platform - Installation Guide
+
+PREREQUISITES
+=============
+1. Install Docker Desktop for Mac:
+   - Visit: https://www.docker.com/products/docker-desktop
+   - Download and install Docker Desktop
+   - Open Docker Desktop and wait for it to start
+
+2. Install Git:
+   - Open Terminal
+   - Run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   - After Homebrew installs, run: brew install git
+
+INSTALLATION STEPS
+==================
+1. Clone the Repository:
+   - Open Terminal
+   - Navigate to where you want to install (e.g., cd ~/Documents)
+   - Run: git clone <your-repo-url> elliott-wave
+   - Run: cd elliott-wave
+
+2. Run the Setup Script:
+   - Run: chmod +x setup.sh
+   - Run: ./setup.sh
+
+3. Configure Environment Variables:
+   - Copy the .env.example to .env:
+     cp .env.example .env
+   - Edit .env with your Supabase credentials:
+     nano .env
+   - Replace the following values with your actual Supabase credentials:
+     VITE_SUPABASE_URL=your_supabase_url
+     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+     SUPABASE_URL=your_supabase_url
+     SUPABASE_SERVICE_KEY=your_supabase_service_key
+
+4. Initialize Database:
+   - Run: docker compose exec app npm run seed
+   - This will populate initial stock data and run wave analysis
+
+5. Start the Application:
+   - Run: docker compose up
+   - Wait for the message "App is running at http://localhost:3000"
+   - Open your browser and visit: http://localhost:3000
+
+TROUBLESHOOTING
+===============
+1. If Docker fails to start:
+   - Open Docker Desktop
+   - Click the restart button
+   - Wait for Docker to fully initialize
+   - Try the command again
+
+2. If npm install fails:
+   - Run: docker compose down
+   - Run: docker compose up --build
+
+3. If database seeding fails:
+   - Check your Supabase credentials in .env
+   - Ensure Docker containers are running
+   - Try: docker compose exec app npm run seed
+
+4. Permission Issues:
+   - Run: chmod -R 755 scripts/
+   - Run: chmod -R 755 node_modules/.bin/
+
+USEFUL COMMANDS
+==============
+- Stop the application: docker compose down
+- View logs: docker compose logs -f
+- Rebuild containers: docker compose up --build
+- Restart: docker compose restart
+- Run wave analysis: docker compose exec app npm run analyze-waves
+
+NOTES
+=====
+- The setup script will install all dependencies and configure Docker
+- First-time setup may take 5-10 minutes
+- Database seeding may take a few minutes
+- Keep Docker Desktop running while using the application
