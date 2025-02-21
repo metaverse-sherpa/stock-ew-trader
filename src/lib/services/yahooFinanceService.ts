@@ -39,7 +39,7 @@ export class YahooFinanceService {
       // Always fetch daily data and aggregate for smaller timeframes
       const interval = "1d";
 
-      const startDate = new Date("2022-01-01");
+      const startDate = new Date("2020-01-01");
       const endDate = new Date();
 
       console.log(
@@ -147,11 +147,15 @@ export class YahooFinanceService {
         }
       }
 
-      // First ensure the stock exists
+      // Get stock details from Yahoo Finance
+      const stockDetails = await yahooFinance.quote(symbol);
+
+      // First ensure the stock exists with updated details
       await supabase.from("stocks").upsert({
         symbol,
-        exchange: "NYSE", // Default exchange
-        name: symbol,
+        exchange: stockDetails.exchange || "NYSE",
+        name: stockDetails.longName || stockDetails.shortName || symbol,
+        market_cap: stockDetails.marketCap || 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });

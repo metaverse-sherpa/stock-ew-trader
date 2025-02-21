@@ -15,6 +15,17 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
         const timeframes =
           timeframe === "all" ? ["1h", "4h", "1d"] : [timeframe];
 
+        // Fetch stock details first
+        const { data: stockData, error: stockError } = await supabase
+          .from("stocks")
+          .select("*")
+          .eq("symbol", symbol)
+          .single();
+
+        if (stockError) {
+          console.warn("Error fetching stock details:", stockError);
+        }
+
         // Fetch wave pattern
         const { data: patternData, error: patternError } = await supabase
           .from("wave_patterns")
@@ -46,7 +57,7 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
           .eq("symbol", symbol)
           .in("timeframe", timeframes)
           .order("timestamp", { ascending: false })
-          .limit(100);
+          .limit(5000);
 
         if (!priceData?.length) {
           console.warn("No price data found for:", { symbol, timeframe });
@@ -62,7 +73,15 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
         if (priceError) throw priceError;
 
         // Set wave pattern (might be null if not found)
-        setWavePattern(patternData || null);
+        setWavePattern(
+          patternData
+            ? {
+                ...patternData,
+                name: stockData?.name || symbol,
+                market_cap: stockData?.market_cap || 0,
+              }
+            : null,
+        );
         // Always set prices if we have them
         setPrices(priceData || []);
       } catch (err) {

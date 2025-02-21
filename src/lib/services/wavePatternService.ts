@@ -193,6 +193,10 @@ export class WavePatternService {
     currentPrice: number,
     prices: StockPrice[],
   ): boolean {
+    // If current price drops below Wave 4 end (Wave 5 start), pattern is invalidated
+    if (currentPrice < pattern.wave4_end) {
+      return false;
+    }
     // Check if Wave 4 has retraced into Wave 1 territory
     if (pattern.wave4_end <= pattern.wave1_end) return false;
 
@@ -213,7 +217,11 @@ export class WavePatternService {
     }
 
     // Wave 5 is still in progress if current price hasn't exceeded Wave 3
-    if (currentPrice <= pattern.wave3_end) {
+    // and hasn't dropped below Wave 4 end
+    if (
+      currentPrice <= pattern.wave3_end &&
+      currentPrice >= pattern.wave4_end
+    ) {
       pattern.status = "Wave 5 Bullish";
       return true;
     }

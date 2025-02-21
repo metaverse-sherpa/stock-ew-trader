@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from "./ui/dialog";
 import TradingViewChart from "./TradingViewChart";
 import AIPredictions from "./AIPredictions";
@@ -37,23 +38,10 @@ const DetailedStockView = ({
   const [showElliottWave, setShowElliottWave] = useState(true);
   const [showFibonacci, setShowFibonacci] = useState(false);
 
-  console.log("DetailedStockView rendering:", {
-    symbol,
-    timeframe,
-  });
   const { wavePattern, prices, loading, error } = useStockDetail(
     symbol,
     timeframe,
   );
-
-  console.log("DetailedStockView data:", {
-    symbol,
-    timeframe,
-    pricesCount: prices?.length,
-    hasWavePattern: !!wavePattern,
-    loading,
-    error,
-  });
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -65,25 +53,32 @@ const DetailedStockView = ({
           Detailed view of {symbol} stock with Elliott Wave analysis and price
           predictions
         </DialogDescription>
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
+        <DialogClose className="hidden" />
+
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              {prevStock && (
-                <Button variant="outline" onClick={() => onNavigate(prevStock)}>
-                  {prevStock}
-                </Button>
-              )}
               <h2 className="text-2xl font-bold">{symbol}</h2>
-              {nextStock && (
-                <Button variant="outline" onClick={() => onNavigate(nextStock)}>
-                  {nextStock}
-                </Button>
+              {wavePattern && (
+                <Badge variant="secondary" className="text-lg px-3 py-1">
+                  {wavePattern.status}
+                </Badge>
               )}
             </div>
-            {wavePattern && (
-              <Badge variant="secondary" className="text-lg px-3 py-1">
-                {wavePattern.status}
-              </Badge>
+            <p className="text-muted-foreground text-sm">
+              {wavePattern?.name || "Loading..."}
+            </p>
+          </div>
+          <div className="flex-1 flex justify-center gap-2">
+            {prevStock && (
+              <Button variant="outline" onClick={() => onNavigate(prevStock)}>
+                {prevStock}
+              </Button>
+            )}
+            {nextStock && (
+              <Button variant="outline" onClick={() => onNavigate(nextStock)}>
+                {nextStock}
+              </Button>
             )}
           </div>
           <Button

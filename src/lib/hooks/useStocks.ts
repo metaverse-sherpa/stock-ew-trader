@@ -109,20 +109,30 @@ export function useStocks(
                 : patterns[selectedTimeframe];
             return waveStatus === "all" ? true : pattern.status === waveStatus;
           })
-          .map(([symbol, patterns]) => ({
-            symbol,
-            exchange: stocksMap[symbol]?.exchange || "NYSE",
-            name: stocksMap[symbol]?.name || symbol,
-            created_at: stocksMap[symbol]?.created_at,
-            updated_at: stocksMap[symbol]?.updated_at,
-            // When 'all' is selected, use any available pattern, otherwise use the selected timeframe's pattern
-            wavePattern:
+          .map(([symbol, patterns]) => {
+            const pattern =
               selectedTimeframe === "all"
                 ? Object.values(patterns)[0]
-                : patterns[selectedTimeframe],
-            // Include prices for all timeframes
-            prices: stockPrices[symbol] || [],
-          }));
+                : patterns[selectedTimeframe];
+            return {
+              symbol,
+              exchange: stocksMap[symbol]?.exchange || "NYSE",
+              name: stocksMap[symbol]?.name || symbol,
+              created_at: stocksMap[symbol]?.created_at,
+              updated_at: stocksMap[symbol]?.updated_at,
+              symbol,
+              exchange: stocksMap[symbol]?.exchange || "NYSE",
+              name: stocksMap[symbol]?.name || symbol,
+              created_at: stocksMap[symbol]?.created_at,
+              updated_at: stocksMap[symbol]?.updated_at,
+              wavePattern: pattern,
+              prices: stockPrices[symbol] || [],
+              wave4EndTime: pattern?.wave4_end_time
+                ? new Date(pattern.wave4_end_time).getTime()
+                : 0,
+            };
+          })
+          .sort((a, b) => b.wave4EndTime - a.wave4EndTime); // Sort by wave4_end_time desc
 
         setStocks(stocksWithPatterns);
       } catch (err) {
