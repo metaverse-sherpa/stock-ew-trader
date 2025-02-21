@@ -28,7 +28,7 @@ interface StockCardProps {
   timeframe?: string;
 }
 
-const StockCard = ({
+function StockCard({
   symbol = "AAPL",
   price = 150.25,
   change = 2.5,
@@ -37,7 +37,7 @@ const StockCard = ({
   onClick = () => {},
   prices = [],
   timeframe = "1d",
-}: StockCardProps) => {
+}: StockCardProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -225,6 +225,19 @@ const StockCard = ({
       </CardContent>
     </Card>
   );
-};
+}
 
-export default StockCard;
+export default React.memo(
+  StockCard,
+  (prevProps: StockCardProps, nextProps: StockCardProps) => {
+    return (
+      prevProps.symbol === nextProps.symbol &&
+      prevProps.price === nextProps.price &&
+      prevProps.change === nextProps.change &&
+      prevProps.confidence === nextProps.confidence &&
+      prevProps.waveStatus === nextProps.waveStatus &&
+      prevProps.timeframe === nextProps.timeframe &&
+      JSON.stringify(prevProps.prices) === JSON.stringify(nextProps.prices)
+    );
+  },
+);

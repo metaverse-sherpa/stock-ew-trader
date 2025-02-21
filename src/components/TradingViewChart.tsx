@@ -55,7 +55,7 @@ const TradingViewChart = ({
         horzLines: { color: "#2c2c2c" },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 600,
+      height: 450,
     });
 
     chartRef.current = chart;
@@ -100,7 +100,7 @@ const TradingViewChart = ({
     if (wavePattern && showElliottWave && wavePattern.timeframe === timeframe) {
       // Add wave lines
       const waveSeries = chart.addLineSeries({
-        color: "#8b5cf6",
+        color: "#ffffff",
         lineWidth: 2,
         title: "Elliott Waves",
       });
@@ -165,27 +165,31 @@ const TradingViewChart = ({
       waveSeries.setData(wavePoints);
       waveSeriesRef.current.push(waveSeries);
 
-      // Add wave labels
+      // Add wave labels with position info
       const waveLabels = [
         {
           time: wavePattern.wave1_end_time,
           text: "1",
           price: wavePattern.wave1_end,
+          isBullish: true, // Wave 1 is bullish
         },
         {
           time: wavePattern.wave2_end_time,
           text: "2",
           price: wavePattern.wave2_end,
+          isBullish: false, // Wave 2 is bearish
         },
         {
           time: wavePattern.wave3_end_time,
           text: "3",
           price: wavePattern.wave3_end,
+          isBullish: true, // Wave 3 is bullish
         },
         {
           time: wavePattern.wave4_end_time,
           text: "4",
           price: wavePattern.wave4_end,
+          isBullish: false, // Wave 4 is bearish
         },
       ];
 
@@ -194,31 +198,55 @@ const TradingViewChart = ({
           time: wavePattern.wave5_end_time,
           text: "5",
           price: wavePattern.wave5_end,
+          isBullish: true, // Wave 5 is bullish
         });
       }
 
       // Add wave labels
-      const labelSeries = chart.addLineSeries({
-        color: "transparent",
-        lastValueVisible: false,
-        priceLineVisible: false,
+      console.log("Wave labels data:", waveLabels);
+
+      // Filter out any invalid wave labels
+      const validWaveLabels = waveLabels.filter((label) => {
+        const isValid = label.time && !isNaN(new Date(label.time).getTime());
+        if (!isValid) {
+          console.warn("Invalid wave label:", label);
+        }
+        return isValid;
       });
 
-      const markers = waveLabels.map(({ time, text }) => ({
-        time: Math.floor(new Date(time).getTime() / 1000),
-        position: "aboveBar",
-        color: "#8b5cf6",
-        shape: "circle",
-        text,
-        size: 4,
-        textColor: "white",
-        borderColor: "#8b5cf6",
-        borderWidth: 2,
-        fontSize: 14,
-      }));
+      console.log("Valid wave labels:", validWaveLabels);
 
-      labelSeries.setMarkers(markers);
-      waveSeriesRef.current.push(labelSeries);
+      // Create a separate series for each wave label
+      validWaveLabels.forEach(({ time, text, price, isBullish }) => {
+        const markerTime = Math.floor(new Date(time).getTime() / 1000);
+        const labelSeries = chart.addLineSeries({
+          color: "transparent",
+          lastValueVisible: false,
+          priceLineVisible: false,
+        });
+
+        // Add a single data point for this label
+        labelSeries.setData([{ time: markerTime, value: price }]);
+
+        // Add the marker
+        labelSeries.setMarkers([
+          {
+            time: markerTime,
+            position: isBullish ? "aboveBar" : "belowBar",
+            color: "#ffffff",
+            shape: "circle",
+            text,
+            size: 1,
+            textColor: "#ffffff",
+            backgroundColor: "#8b5cf6",
+            borderColor: "#8b5cf6",
+            borderWidth: 1,
+            fontSize: 12,
+          },
+        ]);
+
+        waveSeriesRef.current.push(labelSeries);
+      });
 
       // Add target price projections based on wave status
       if (
@@ -283,38 +311,6 @@ const TradingViewChart = ({
       }
     }
 
-    // Add Fibonacci retracements if enabled
-    if (showFibonacci && wavePattern) {
-      const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-      const highPrice = wavePattern.wave3_end;
-      const lowPrice = wavePattern.wave2_end;
-      const priceRange = highPrice - lowPrice;
-
-      fibLevels.forEach((level) => {
-        const price = highPrice - priceRange * level;
-        const fibLine = chart.addLineSeries({
-          color: "#6b7280",
-          lineWidth: 1,
-          lineStyle: 2,
-          title: `Fib ${(level * 100).toFixed(1)}%`,
-        });
-
-        const startTime = Math.floor(
-          new Date(wavePattern.wave2_end_time).getTime() / 1000,
-        );
-        const endTime =
-          Math.floor(new Date(wavePattern.wave4_end_time).getTime() / 1000) +
-          86400 * 30;
-
-        fibLine.setData([
-          { time: startTime, value: price },
-          { time: endTime, value: price },
-        ]);
-
-        waveSeriesRef.current.push(fibLine);
-      });
-    }
-
     // Fit content after all data is set
     chart.timeScale().fitContent();
 
@@ -348,20 +344,12 @@ const TradingViewChart = ({
           </TabsList>
         </Tabs>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant={showElliottWave ? "default" : "outline"}
-            onClick={() => onToggleElliottWave(!showElliottWave)}
-            className="text-sm"
-          >
-            Elliott Wave
-          </Button>
-        </div>
+        {/* Elliott Wave toggle removed */}
       </div>
 
       <div
         ref={chartContainerRef}
-        className="w-full h-[600px] bg-muted rounded-lg overflow-hidden"
+        className="w-full h-[450px] bg-muted rounded-lg overflow-hidden"
       />
     </div>
   );

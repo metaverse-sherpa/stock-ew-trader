@@ -37,15 +37,23 @@ const DetailedStockView = ({
 }: DetailedStockViewProps) => {
   const [showElliottWave, setShowElliottWave] = useState(true);
   const [showFibonacci, setShowFibonacci] = useState(false);
+  const [stockName, setStockName] = useState<string>("");
 
   const { wavePattern, prices, loading, error } = useStockDetail(
     symbol,
     timeframe,
   );
 
+  // Update stock name when wave pattern changes
+  React.useEffect(() => {
+    if (wavePattern?.name) {
+      setStockName(wavePattern.name);
+    }
+  }, [wavePattern?.name]);
+
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[90vw] w-[1512px] h-[982px] bg-background p-6">
+      <DialogContent className="max-w-[90vw] w-[1512px] max-h-[90vh] bg-background p-6">
         <DialogTitle className="sr-only">
           Stock Details for {symbol}
         </DialogTitle>
@@ -53,41 +61,32 @@ const DetailedStockView = ({
           Detailed view of {symbol} stock with Elliott Wave analysis and price
           predictions
         </DialogDescription>
-        <DialogClose className="hidden" />
+        {/* DialogClose is handled by the Dialog component */}
 
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold">{symbol}</h2>
-              {wavePattern && (
-                <Badge variant="secondary" className="text-lg px-3 py-1">
-                  {wavePattern.status}
-                </Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground text-sm">
-              {wavePattern?.name || "Loading..."}
-            </p>
-          </div>
-          <div className="flex-1 flex justify-center gap-2">
-            {prevStock && (
-              <Button variant="outline" onClick={() => onNavigate(prevStock)}>
-                {prevStock}
-              </Button>
-            )}
-            {nextStock && (
-              <Button variant="outline" onClick={() => onNavigate(nextStock)}>
-                {nextStock}
-              </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="outline"
+            onClick={() => prevStock && onNavigate(prevStock)}
+            disabled={!prevStock}
+            className="w-24"
+          >
+            ← {prevStock}
+          </Button>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">
+              {stockName} ({symbol})
+            </h2>
+            {wavePattern && (
+              <Badge variant="secondary">{wavePattern.status}</Badge>
             )}
           </div>
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="hover:bg-muted"
+            variant="outline"
+            onClick={() => nextStock && onNavigate(nextStock)}
+            disabled={!nextStock}
+            className="w-24"
           >
-            <X className="h-6 w-6" />
+            {nextStock} →
           </Button>
         </div>
 

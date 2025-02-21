@@ -6,9 +6,11 @@ export function useStocks(
   selectedTimeframe: Timeframe,
   waveStatus: WaveStatus | "all" = "Wave 5 Bullish",
 ) {
-  // Always fetch all timeframes for mini charts
-  const timeframes: Timeframe[] =
-    selectedTimeframe === "all" ? ["1h", "4h", "1d"] : [selectedTimeframe];
+  // Cache prices for mini charts
+  const [priceCache, setPriceCache] = useState<Record<string, any[]>>({});
+
+  // Only fetch the selected timeframe
+  const timeframes: Timeframe[] = [selectedTimeframe];
   console.log("useStocks hook called with timeframe:", selectedTimeframe);
   const [stocks, setStocks] = useState<
     (Stock & { wavePattern: WavePattern | null; prices: any[] })[]
@@ -51,25 +53,39 @@ export function useStocks(
           stocks.map((stock) => [stock.symbol, stock]),
         );
 
-        // Then get prices for each stock
-        const pricesPromises = wavePatterns.map((pattern) =>
-          supabase
+        // Then get prices for each stock, using cache when possible
+        const pricesPromises = wavePatterns.map(async (pattern) => {
+          const cacheKey = `${pattern.symbol}_${selectedTimeframe}`;
+
+          // Use cached data if available
+          if (priceCache[cacheKey]) {
+            return priceCache[cacheKey];
+          }
+
+          const { data, error } = await supabase
             .from("stock_prices")
             .select()
             .eq("symbol", pattern.symbol)
-            .in("timeframe", timeframes)
+            .eq("timeframe", selectedTimeframe)
             .order("timestamp", { ascending: true })
-            .limit(100)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              return (
-                data?.map((price) => ({
-                  ...price,
-                  timeframe: price.timeframe, // Use the timeframe from the price object
-                })) || []
-              );
-            }),
-        );
+            .limit(100);
+
+          if (error) throw error;
+
+          const prices =
+            data?.map((price) => ({
+              ...price,
+              timeframe: price.timeframe,
+            })) || [];
+
+          // Update cache
+          setPriceCache((prev) => ({
+            ...prev,
+            [cacheKey]: prices,
+          }));
+
+          return prices;
+        });
 
         const pricesResults = await Promise.all(pricesPromises);
         console.log("Prices results:", pricesResults);
@@ -115,11 +131,6 @@ export function useStocks(
                 ? Object.values(patterns)[0]
                 : patterns[selectedTimeframe];
             return {
-              symbol,
-              exchange: stocksMap[symbol]?.exchange || "NYSE",
-              name: stocksMap[symbol]?.name || symbol,
-              created_at: stocksMap[symbol]?.created_at,
-              updated_at: stocksMap[symbol]?.updated_at,
               symbol,
               exchange: stocksMap[symbol]?.exchange || "NYSE",
               name: stocksMap[symbol]?.name || symbol,
