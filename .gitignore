@@ -29,3 +29,8 @@ dist-ssr
 **/tempobook/storyboards/
 
 core
+
+# Environment variables
+.env
+.env.local
+.env.*.local
