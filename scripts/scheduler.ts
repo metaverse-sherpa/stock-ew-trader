@@ -26,12 +26,16 @@ cron.schedule("30 0 * * *", async () => {
   }
 });
 
-// Run initial data fetch and analysis
-YahooFinanceService.updateAllStocks()
-  .then(() => WavePatternService.generateAllPatterns())
-  .catch((error) => {
-    console.error("Error in initial setup:", error);
-  });
+// Run initial data fetch if INITIAL_FETCH environment variable is set
+if (process.env.INITIAL_FETCH === "true") {
+  console.log("Running initial data fetch...");
+  YahooFinanceService.updateAllStocks()
+    .then(() => WavePatternService.generateAllPatterns())
+    .then(() => console.log("Initial data fetch completed"))
+    .catch((error) => console.error("Error in initial data fetch:", error));
+} else {
+  console.log("Scheduler started. Waiting for next scheduled run...");
+}
 
 // Keep the process running
 process.stdin.resume();

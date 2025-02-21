@@ -2,21 +2,23 @@ import React from "react";
 import { Card } from "./ui/card";
 import StockCard from "./StockCard";
 import { useStocks } from "@/lib/hooks/useStocks";
-import type { Timeframe } from "@/lib/types";
+import type { Timeframe, WaveStatus } from "@/lib/types";
 
 interface StockGridProps {
   searchQuery?: string;
   timeframe?: Timeframe;
-  onStockSelect?: (symbol: string) => void;
+  waveStatus?: WaveStatus | "all";
+  onStockSelect?: (symbol: string, allSymbols?: string[]) => void;
 }
 
 const StockGrid = ({
   onStockSelect,
   searchQuery = "",
   timeframe = "1h",
+  waveStatus = "Wave 5 Bullish",
 }: StockGridProps) => {
   console.log("StockGrid rendered with timeframe:", timeframe);
-  const { stocks, loading, error } = useStocks(timeframe);
+  const { stocks, loading, error } = useStocks(timeframe, waveStatus);
 
   // Hide loading dialog when stocks are loaded
   React.useEffect(() => {
@@ -86,7 +88,12 @@ const StockGrid = ({
           }
           confidence={stock.wavePattern?.confidence || 0}
           waveStatus={stock.wavePattern?.status || ""}
-          onClick={() => onStockSelect?.(stock.symbol)}
+          onClick={() =>
+            onStockSelect?.(
+              stock.symbol,
+              filteredStocks.map((s) => s.symbol),
+            )
+          }
           prices={stock.prices || []}
           timeframe={timeframe}
         />

@@ -181,7 +181,7 @@ const StockCard = ({
             <h3 className="text-2xl font-bold">{symbol}</h3>
             <Badge
               variant={confidence >= 80 ? "default" : "secondary"}
-              className="h-6"
+              className="h-5 text-xs whitespace-nowrap"
             >
               {confidence}% Confidence
             </Badge>

@@ -12,12 +12,15 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
     console.log("useStockDetail effect running for:", { symbol, timeframe });
     const fetchStockDetail = async () => {
       try {
+        const timeframes =
+          timeframe === "all" ? ["1h", "4h", "1d"] : [timeframe];
+
         // Fetch wave pattern
         const { data: patternData, error: patternError } = await supabase
           .from("wave_patterns")
           .select("*")
           .eq("symbol", symbol)
-          .eq("timeframe", timeframe)
+          .in("timeframe", timeframes)
           .order("created_at", { ascending: false })
           .limit(1)
           .single();
@@ -41,8 +44,9 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
           .from("stock_prices")
           .select("*")
           .eq("symbol", symbol)
-          .eq("timeframe", timeframe)
-          .order("timestamp", { ascending: true });
+          .in("timeframe", timeframes)
+          .order("timestamp", { ascending: false })
+          .limit(100);
 
         if (!priceData?.length) {
           console.warn("No price data found for:", { symbol, timeframe });

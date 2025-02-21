@@ -18,6 +18,9 @@ interface PriceTarget {
 interface AIPredictionsProps {
   targets?: PriceTarget[];
   currentPrice?: number;
+  wavePattern?: {
+    status: string;
+  } | null;
 }
 
 const defaultTargets: PriceTarget[] = [
@@ -29,12 +32,15 @@ const defaultTargets: PriceTarget[] = [
 const AIPredictions = ({
   targets = defaultTargets,
   currentPrice = 145.3,
+  wavePattern = null,
 }: AIPredictionsProps) => {
   return (
     <Card className="w-full p-6 bg-background border-border">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">AI Wave 5 Predictions</h3>
+          <h3 className="text-xl font-semibold">
+            Wave {wavePattern?.status?.split(" ")[1] || "5"} Predictions
+          </h3>
           <Badge variant="outline" className="px-2 py-1">
             Wave 5 Analysis
           </Badge>

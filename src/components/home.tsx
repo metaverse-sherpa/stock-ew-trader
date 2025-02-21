@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTheme } from "@/lib/hooks/useTheme";
 import DashboardHeader from "./DashboardHeader";
 import DetailedStockView from "./DetailedStockView";
 import StockGrid from "./StockGrid";
@@ -7,14 +8,18 @@ import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "./ui/button";
 import { Settings } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { Timeframe } from "@/lib/types";
+import type { Timeframe, WaveStatus } from "@/lib/types";
 
 const Home = () => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { isDarkMode, setIsDarkMode } = useTheme();
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1h");
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedWaveStatus, setSelectedWaveStatus] = useState<
+    WaveStatus | "all"
+  >("Wave 5 Bullish");
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  const [stocks, setStocks] = useState<string[]>([]);
 
   // Load default timeframe on initial render
   useEffect(() => {
@@ -38,9 +43,11 @@ const Home = () => {
       <DashboardHeader
         onSearch={setSearchQuery}
         onTimeframeChange={handleTimeframeChange}
+        onWaveStatusChange={setSelectedWaveStatus}
         onThemeToggle={() => setIsDarkMode(!isDarkMode)}
         isDarkMode={isDarkMode}
         selectedTimeframe={selectedTimeframe}
+        selectedWaveStatus={selectedWaveStatus}
       >
         <SettingsDialog
           onTimeframeChange={handleTimeframeChange}
@@ -58,11 +65,13 @@ const Home = () => {
         <StockGrid
           searchQuery={searchQuery}
           timeframe={selectedTimeframe}
-          onStockSelect={(symbol) => {
+          waveStatus={selectedWaveStatus}
+          onStockSelect={(symbol, allSymbols) => {
             if (symbol === "") {
               setIsLoading(false);
             } else {
               setSelectedStock(symbol);
+              if (allSymbols) setStocks(allSymbols);
             }
           }}
         />
@@ -75,6 +84,17 @@ const Home = () => {
           symbol={selectedStock}
           timeframe={selectedTimeframe}
           onTimeframeChange={handleTimeframeChange}
+          onNavigate={setSelectedStock}
+          prevStock={
+            selectedStock
+              ? stocks[stocks.indexOf(selectedStock) - 1]
+              : undefined
+          }
+          nextStock={
+            selectedStock
+              ? stocks[stocks.indexOf(selectedStock) + 1]
+              : undefined
+          }
         />
       )}
     </div>

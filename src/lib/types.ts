@@ -1,5 +1,5 @@
 // Timeframes must be lowercase
-export type Timeframe = "1h" | "4h" | "1d";
+export type Timeframe = "1h" | "4h" | "1d" | "all";
 export type WaveStatus =
   | "Wave 1"
   | "Wave 2"

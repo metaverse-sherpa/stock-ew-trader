@@ -13,7 +13,9 @@ import {
 } from "react-router-dom";
 
 import { TempoDevtools } from "tempo-devtools";
-TempoDevtools.init();
+
+// Initialize Tempo without running data updates or seed script
+TempoDevtools.init({ skipDataUpdates: true, skipSeed: true });
 
 const basename = import.meta.env.BASE_URL;
 

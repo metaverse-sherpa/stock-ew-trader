@@ -288,15 +288,27 @@ export class WavePatternService {
             if (pricesAfterB.length >= 3) {
               const waveCLow = Math.min(...pricesAfterB.map((p) => p.low));
               const waveCSize = waveBHigh - waveCLow;
+              const currentPrice = prices[prices.length - 1].close;
+              const waveCProgress = (waveBHigh - currentPrice) / waveASize;
 
-              // Wave C should be at least as long as Wave A
-              if (waveCSize >= waveASize) {
+              // Wave C should be at least 0.618 times Wave A to be considered
+              if (waveCProgress >= 0.618) {
                 pattern.wave_c_start = waveBHigh;
                 pattern.wave_c_end = waveCLow;
                 pattern.wave_c_end_time = pricesAfterB.find(
                   (p) => p.low === waveCLow,
                 )?.timestamp;
-                pattern.status = "Completed";
+
+                // If we've exceeded Wave A length or made a new low, mark as completed
+                if (waveCSize >= waveASize || currentPrice < waveCLow) {
+                  pattern.status = "Completed";
+                } else {
+                  pattern.status = "Wave C";
+                  // Set target prices for Wave C
+                  pattern.target_price1 = waveBHigh - waveASize * 1.0; // 100% of Wave A
+                  pattern.target_price2 = waveBHigh - waveASize * 1.618; // 161.8% of Wave A
+                  pattern.target_price3 = waveBHigh - waveASize * 2.618; // 261.8% of Wave A
+                }
               }
             }
           }

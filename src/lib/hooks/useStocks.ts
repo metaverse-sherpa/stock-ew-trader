@@ -2,9 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import type { Stock, WavePattern, Timeframe } from "../types";
 
-export function useStocks(selectedTimeframe: Timeframe) {
+export function useStocks(
+  selectedTimeframe: Timeframe,
+  waveStatus: WaveStatus | "all" = "Wave 5 Bullish",
+) {
   // Always fetch all timeframes for mini charts
-  const timeframes: Timeframe[] = ["1h", "4h", "1d"];
+  const timeframes: Timeframe[] =
+    selectedTimeframe === "all" ? ["1h", "4h", "1d"] : [selectedTimeframe];
   console.log("useStocks hook called with timeframe:", selectedTimeframe);
   const [stocks, setStocks] = useState<
     (Stock & { wavePattern: WavePattern | null; prices: any[] })[]
@@ -90,16 +94,32 @@ export function useStocks(selectedTimeframe: Timeframe) {
           {} as Record<string, Record<Timeframe, any>>,
         );
 
-        // Create stock entries for the selected timeframe's patterns
+        // Create stock entries for all patterns when 'all' is selected, or filter by timeframe
         const stocksWithPatterns = Object.entries(patternsBySymbol)
-          .filter(([_, patterns]) => patterns[selectedTimeframe])
+          .filter(([_, patterns]) => {
+            // First check timeframe
+            const hasTimeframe =
+              selectedTimeframe === "all" ? true : patterns[selectedTimeframe];
+            if (!hasTimeframe) return false;
+
+            // Then check wave status
+            const pattern =
+              selectedTimeframe === "all"
+                ? Object.values(patterns)[0]
+                : patterns[selectedTimeframe];
+            return waveStatus === "all" ? true : pattern.status === waveStatus;
+          })
           .map(([symbol, patterns]) => ({
             symbol,
-            exchange: patterns[selectedTimeframe].exchange,
+            exchange: stocksMap[symbol]?.exchange || "NYSE",
             name: stocksMap[symbol]?.name || symbol,
-            created_at: patterns[selectedTimeframe].created_at,
-            updated_at: patterns[selectedTimeframe].updated_at,
-            wavePattern: patterns[selectedTimeframe],
+            created_at: stocksMap[symbol]?.created_at,
+            updated_at: stocksMap[symbol]?.updated_at,
+            // When 'all' is selected, use any available pattern, otherwise use the selected timeframe's pattern
+            wavePattern:
+              selectedTimeframe === "all"
+                ? Object.values(patterns)[0]
+                : patterns[selectedTimeframe],
             // Include prices for all timeframes
             prices: stockPrices[symbol] || [],
           }));
@@ -125,7 +145,7 @@ export function useStocks(selectedTimeframe: Timeframe) {
           event: "*",
           schema: "public",
           table: "wave_patterns",
-          filter: `timeframe=eq.${selectedTimeframe}`,
+          filter: `timeframe=eq.${selectedTimeframe}${waveStatus !== "all" ? ` and status=eq.${waveStatus}` : ""}`,
         },
         (payload) => {
           // Update the stocks list when wave patterns change
@@ -151,7 +171,7 @@ export function useStocks(selectedTimeframe: Timeframe) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [selectedTimeframe]);
+  }, [selectedTimeframe, waveStatus]);
 
   return { stocks, loading, error };
 }
