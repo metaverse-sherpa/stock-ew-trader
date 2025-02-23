@@ -12,11 +12,6 @@ import {
   UNSAFE_RouteContext as RouteContext,
 } from "react-router-dom";
 
-import { TempoDevtools } from "tempo-devtools";
-
-// Initialize Tempo without running data updates or seed script
-TempoDevtools.init({ skipDataUpdates: true, skipSeed: true });
-
 const basename = import.meta.env.BASE_URL;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

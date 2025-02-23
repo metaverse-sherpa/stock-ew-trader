@@ -3,6 +3,7 @@ import { Card } from "./ui/card";
 import StockCard from "./StockCard";
 import { useStocks } from "@/lib/hooks/useStocks";
 import type { Timeframe, WaveStatus } from "@/lib/types";
+import Spinner from './Spinner';
 
 interface StockGridProps {
   searchQuery?: string;
@@ -17,48 +18,25 @@ const StockGrid = ({
   timeframe = "1h",
   waveStatus = "Wave 5 Bullish",
 }: StockGridProps) => {
-  console.log("StockGrid rendered with timeframe:", timeframe);
   const { stocks, loading, error } = useStocks(timeframe, waveStatus);
-
-  // Hide loading dialog when stocks are loaded
-  React.useEffect(() => {
-    if (onStockSelect) {
-      // Small delay to ensure the grid is rendered
-      const timer = setTimeout(() => {
-        onStockSelect("");
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [stocks, onStockSelect]);
-
-  React.useEffect(() => {
-    console.log("StockGrid timeframe changed:", timeframe);
-  }, [timeframe]);
 
   const filteredStocks = React.useMemo(() => {
     if (!searchQuery) return stocks;
     return stocks.filter((stock) =>
-      stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()),
+      stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      stock.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [stocks, searchQuery]);
 
+  // Show loading spinner when loading is true
   if (loading) {
-    return (
-      <Card className="p-8 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </Card>
-    );
+    return <Spinner />;
   }
 
   if (error) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-destructive">
-          Error loading stocks: {error.message}
-        </p>
+        <p className="text-destructive">Error loading stocks: {error.message}</p>
       </Card>
     );
   }
@@ -66,9 +44,7 @@ const StockGrid = ({
   if (!loading && filteredStocks.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-muted-foreground">
-          No stocks found matching your search criteria
-        </p>
+        <p className="text-muted-foreground">No stocks found matching your search criteria</p>
       </Card>
     );
   }

@@ -170,6 +170,8 @@ function StockCard({
 
   const isPositive = change >= 0;
 
+  const hasValidPrices = prices && prices.length > 0;
+
   return (
     <Card
       className="w-[360px] h-[280px] bg-background hover:shadow-lg transition-shadow cursor-pointer"
@@ -213,7 +215,7 @@ function StockCard({
               ) : (
                 <ArrowDownRight className="w-5 h-4" />
               )}
-              <span className="font-semibold">{Math.abs(change)}%</span>
+              <span className="font-semibold">{Math.abs(change).toFixed(2)}%</span>
             </div>
           </div>
         </div>

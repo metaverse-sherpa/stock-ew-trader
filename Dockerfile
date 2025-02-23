@@ -21,6 +21,6 @@ COPY . .
 RUN chmod -R 755 scripts/
 RUN chmod -R 755 node_modules/.bin/
 
-EXPOSE 3002
+EXPOSE 5005
 
 CMD ["npm", "run", "dev"]

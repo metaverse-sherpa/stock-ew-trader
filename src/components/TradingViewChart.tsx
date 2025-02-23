@@ -31,8 +31,22 @@ const TradingViewChart = ({
   const chartRef = useRef<any>(null);
   const waveSeriesRef = useRef<any[]>([]);
 
+  const chartData = React.useMemo(() => {
+    if (!prices || prices.length === 0) return [];
+
+    return prices
+      .map((price) => ({
+        time: new Date(price.timestamp).getTime() / 1000,
+        open: price.open,
+        high: price.high,
+        low: price.low,
+        close: price.close,
+      }))
+      .sort((a, b) => a.time - b.time);
+  }, [prices]);
+
   useEffect(() => {
-    if (!chartContainerRef.current || !prices?.length) return;
+    if (!chartContainerRef.current) return;
 
     // Clear existing chart and series
     if (chartRef.current) {
