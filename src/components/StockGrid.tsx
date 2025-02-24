@@ -51,29 +51,39 @@ const StockGrid = ({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {filteredStocks.map((stock) => (
-        <StockCard
-          key={stock.symbol}
-          symbol={stock.symbol}
-          price={stock.wavePattern?.current_price || 0}
-          change={
-            (((stock.wavePattern?.current_price || 0) -
-              (stock.wavePattern?.wave1_start || 0)) /
-              (stock.wavePattern?.wave1_start || 1)) *
-            100
-          }
-          confidence={stock.wavePattern?.confidence || 0}
-          waveStatus={stock.wavePattern?.status || ""}
-          onClick={() =>
-            onStockSelect?.(
-              stock.symbol,
-              filteredStocks.map((s) => s.symbol),
-            )
-          }
-          prices={stock.prices || []}
-          timeframe={timeframe}
-        />
-      ))}
+      {filteredStocks
+        .filter((stock, index, self) => {
+          if (timeframe === 'all' || waveStatus === 'all') return true;
+          return index === self.findIndex((s) => 
+            s.symbol === stock.symbol && 
+            s.wavePattern?.timeframe === stock.wavePattern?.timeframe &&
+            s.wavePattern?.status === stock.wavePattern?.status
+          );
+        })
+        .map((stock) => (
+          <StockCard
+            key={`${stock.symbol}-${stock.wavePattern?.timeframe}-${stock.wavePattern?.status}`}
+            symbol={stock.symbol}
+            price={stock.wavePattern?.current_price || 0}
+            change={
+              (((stock.wavePattern?.current_price || 0) -
+                (stock.wavePattern?.wave1_start || 0)) /
+                (stock.wavePattern?.wave1_start || 1)) *
+              100
+            }
+            confidence={stock.wavePattern?.confidence || 0}
+            waveStatus={stock.wavePattern?.status || ""}
+            onClick={() =>
+              onStockSelect?.(
+                stock.symbol,
+                filteredStocks.map((s) => s.symbol),
+              )
+            }
+            prices={stock.prices || []}
+            timeframe={stock.wavePattern?.timeframe || "1h"}
+            wavePattern={stock.wavePattern}
+          />
+        ))}
     </div>
   );
 };

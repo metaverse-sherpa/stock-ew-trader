@@ -26,6 +26,9 @@ interface StockCardProps {
     timeframe?: string;
   }>;
   timeframe?: string;
+  wavePattern?: {
+    timeframe?: string;
+  };
 }
 
 function StockCard({
@@ -37,6 +40,7 @@ function StockCard({
   onClick = () => {},
   prices = [],
   timeframe = "1d",
+  wavePattern,
 }: StockCardProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
@@ -180,7 +184,12 @@ function StockCard({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <h3 className="text-2xl font-bold">{symbol}</h3>
+            <div className="flex flex-col">
+              <h3 className="text-2xl font-bold">{symbol}</h3>
+              <span className="text-sm text-muted-foreground">
+                ({wavePattern?.timeframe || timeframe})
+              </span>
+            </div>
             <Badge
               variant={confidence >= 80 ? "default" : "secondary"}
               className="h-5 text-xs whitespace-nowrap"
@@ -239,6 +248,7 @@ export default React.memo(
       prevProps.confidence === nextProps.confidence &&
       prevProps.waveStatus === nextProps.waveStatus &&
       prevProps.timeframe === nextProps.timeframe &&
+      prevProps.wavePattern?.timeframe === nextProps.wavePattern?.timeframe &&
       JSON.stringify(prevProps.prices) === JSON.stringify(nextProps.prices)
     );
   },
