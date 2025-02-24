@@ -12,7 +12,7 @@ import type { Timeframe, WaveStatus } from "@/lib/types";
 
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
-  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1h");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
   const [selectedWaveStatus, setSelectedWaveStatus] = useState<
     WaveStatus | "all"
   >("Wave 5 Bullish");
@@ -20,7 +20,7 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const [stocks, setStocks] = useState<string[]>([]);
-  const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1h");
+  const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1d");
   const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<WaveStatus | "all">("Wave 5 Bullish");
   const [navigationList, setNavigationList] = useState<Array<{
     symbol: string;

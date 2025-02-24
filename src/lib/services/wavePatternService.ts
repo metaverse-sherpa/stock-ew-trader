@@ -3,7 +3,17 @@ import type { Timeframe, WaveStatus, StockPrice } from "../types";
 import { generateUUID } from "../utils";
 
 export class WavePatternService {
-  static async generateAllPatterns(onProgress?: (message: string) => void) {
+  static async generateAllPatterns(
+    onProgress?: (
+      message: string, 
+      progress?: {
+        symbol: string;
+        timeframe: string;
+        completed: number;
+        total: number;
+      }
+    ) => void
+  ) {
     console.log("Starting pattern generation...");
     try {
       onProgress?.("Fetching stocks...");
@@ -34,14 +44,23 @@ export class WavePatternService {
 
       console.log("Existing patterns cleared successfully.");
 
-      const timeframes: Timeframe[] = ["1h", "4h", "1d"];
+      const timeframes = ['1h', '4h', '1d'];
+      const total = (stocks?.length || 0) * timeframes.length;
+      let completed = 0;
 
-      for (let i = 0; i < stocks.length; i++) {
-        const stock = stocks[i];
-        onProgress?.(
-          `Analyzing ${stock.symbol} (${i + 1}/${stocks.length})...`,
-        );
+      for (const stock of stocks) {
         for (const timeframe of timeframes) {
+          completed++;
+          onProgress?.(
+            `Analyzing ${stock.symbol} on ${timeframe} timeframe...`,
+            {
+              symbol: stock.symbol,
+              timeframe,
+              completed,
+              total
+            }
+          );
+
           // Get prices for this stock and timeframe
           console.log(`Fetching prices for ${stock.symbol} (${timeframe})...`);
           const { data: prices, error: pricesError } = await supabase

@@ -37,39 +37,32 @@ export function SettingsDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoAnalysis, setAutoAnalysis] = useState(false);
-  const [defaultTimeframe, setDefaultTimeframe] = useState<Timeframe>("1h");
+  const [defaultTimeframe, setDefaultTimeframe] = useState<Timeframe>("1d");
 
   useEffect(() => {
-    // Load default timeframe setting
     const loadSettings = async () => {
       const { data } = await supabase.from("user_settings").select().single();
-
       if (data?.default_timeframe) {
         setDefaultTimeframe(data.default_timeframe as Timeframe);
+      } else {
+        // If no setting exists, create one with 1d default
+        await supabase.from("user_settings").upsert({
+          default_timeframe: "1d",
+          auto_analysis: false
+        });
       }
+      setAutoAnalysis(data?.auto_analysis ?? false);
     };
 
     loadSettings();
   }, []);
 
-  const handleTimeframeChange = async (value: Timeframe) => {
-    setDefaultTimeframe(value);
-
-    // Save to database
-    const { error } = await supabase
+  const handleTimeframeChange = async (value: string) => {
+    setDefaultTimeframe(value as Timeframe);
+    onTimeframeChange?.(value as Timeframe);
+    await supabase
       .from("user_settings")
-      .upsert({ default_timeframe: value });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save default timeframe",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    onTimeframeChange?.(value);
+      .upsert({ default_timeframe: value, auto_analysis: autoAnalysis });
   };
 
   const handleAnalyzeWaves = async () => {
