@@ -20,6 +20,13 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const [stocks, setStocks] = useState<string[]>([]);
+  const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1h");
+  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<WaveStatus | "all">("Wave 5 Bullish");
+  const [navigationList, setNavigationList] = useState<Array<{
+    symbol: string;
+    timeframe: string;
+    waveStatus: string;
+  }>>([]);
 
   // Load default timeframe on initial render
   useEffect(() => {
@@ -66,13 +73,11 @@ const Home = () => {
           searchQuery={searchQuery}
           timeframe={selectedTimeframe}
           waveStatus={selectedWaveStatus}
-          onStockSelect={(symbol, allSymbols) => {
-            if (symbol === "") {
-              setIsLoading(false);
-            } else {
-              setSelectedStock(symbol);
-              if (allSymbols) setStocks(allSymbols);
-            }
+          onStockSelect={(symbol, navList, timeframe, waveStatus) => {
+            setSelectedStock(symbol);
+            if (navList) setNavigationList(navList);
+            if (timeframe) setSelectedDetailTimeframe(timeframe as Timeframe);
+            if (waveStatus) setSelectedDetailWaveStatus(waveStatus as WaveStatus);
           }}
         />
       </main>
@@ -82,17 +87,59 @@ const Home = () => {
           isOpen={!!selectedStock}
           onClose={() => setSelectedStock(null)}
           symbol={selectedStock}
-          timeframe={selectedTimeframe}
-          onTimeframeChange={handleTimeframeChange}
-          onNavigate={setSelectedStock}
+          timeframe={selectedDetailTimeframe}
+          waveStatus={selectedDetailWaveStatus}
+          onTimeframeChange={setSelectedDetailTimeframe}
+          onWaveStatusChange={setSelectedDetailWaveStatus}
+          onNavigate={(symbol) => {
+            const currentIndex = navigationList.findIndex(
+              item => 
+                item.symbol === selectedStock && 
+                item.timeframe === selectedDetailTimeframe &&
+                item.waveStatus === selectedDetailWaveStatus
+            );
+            
+            const nextItem = navigationList[currentIndex + 1];
+            const prevItem = navigationList[currentIndex - 1];
+            
+            if (symbol === prevItem?.symbol) {
+              setSelectedDetailTimeframe(prevItem.timeframe as Timeframe);
+              setSelectedDetailWaveStatus(prevItem.waveStatus as WaveStatus);
+            } else if (symbol === nextItem?.symbol) {
+              setSelectedDetailTimeframe(nextItem.timeframe as Timeframe);
+              setSelectedDetailWaveStatus(nextItem.waveStatus as WaveStatus);
+            }
+            
+            setSelectedStock(symbol);
+          }}
           prevStock={
-            selectedStock
-              ? stocks[stocks.indexOf(selectedStock) - 1]
+            navigationList.findIndex(
+              item => 
+                item.symbol === selectedStock && 
+                item.timeframe === selectedDetailTimeframe &&
+                item.waveStatus === selectedDetailWaveStatus
+            ) > 0
+              ? navigationList[navigationList.findIndex(
+                  item => 
+                    item.symbol === selectedStock && 
+                    item.timeframe === selectedDetailTimeframe &&
+                    item.waveStatus === selectedDetailWaveStatus
+                ) - 1].symbol
               : undefined
           }
           nextStock={
-            selectedStock
-              ? stocks[stocks.indexOf(selectedStock) + 1]
+            navigationList.findIndex(
+              item => 
+                item.symbol === selectedStock && 
+                item.timeframe === selectedDetailTimeframe &&
+                item.waveStatus === selectedDetailWaveStatus
+            ) < navigationList.length - 1
+              ? navigationList[navigationList.findIndex(
+                  item => 
+                    item.symbol === selectedStock && 
+                    item.timeframe === selectedDetailTimeframe &&
+                    item.waveStatus === selectedDetailWaveStatus
+                ) + 1].symbol
               : undefined
           }
         />

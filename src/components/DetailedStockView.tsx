@@ -12,15 +12,17 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
 import { useStockDetail } from "@/lib/hooks/useStockDetail";
-import type { Timeframe } from "@/lib/types";
+import type { Timeframe, WaveStatus } from "@/lib/types";
 
 interface DetailedStockViewProps {
-  isOpen?: boolean;
-  onClose?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
   symbol: string;
   timeframe: Timeframe;
-  onTimeframeChange?: (timeframe: Timeframe) => void;
-  onNavigate?: (symbol: string) => void;
+  waveStatus: WaveStatus | "all";
+  onTimeframeChange: (timeframe: Timeframe) => void;
+  onWaveStatusChange: (status: WaveStatus | "all") => void;
+  onNavigate: (symbol: string) => void;
   prevStock?: string;
   nextStock?: string;
 }
@@ -30,7 +32,9 @@ const DetailedStockView = ({
   onClose = () => {},
   symbol,
   timeframe,
+  waveStatus,
   onTimeframeChange = () => {},
+  onWaveStatusChange = () => {},
   onNavigate = () => {},
   prevStock,
   nextStock,

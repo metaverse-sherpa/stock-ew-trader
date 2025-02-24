@@ -9,7 +9,16 @@ interface StockGridProps {
   searchQuery?: string;
   timeframe?: Timeframe;
   waveStatus?: WaveStatus | "all";
-  onStockSelect?: (symbol: string, allSymbols?: string[]) => void;
+  onStockSelect?: (
+    symbol: string, 
+    navigationList?: Array<{
+      symbol: string;
+      timeframe: string;
+      waveStatus: string;
+    }>,
+    selectedTimeframe?: string,
+    selectedWaveStatus?: string
+  ) => void;
 }
 
 const StockGrid = ({
@@ -60,30 +69,41 @@ const StockGrid = ({
             s.wavePattern?.status === stock.wavePattern?.status
           );
         })
-        .map((stock) => (
-          <StockCard
-            key={`${stock.symbol}-${stock.wavePattern?.timeframe}-${stock.wavePattern?.status}`}
-            symbol={stock.symbol}
-            price={stock.wavePattern?.current_price || 0}
-            change={
-              (((stock.wavePattern?.current_price || 0) -
-                (stock.wavePattern?.wave1_start || 0)) /
-                (stock.wavePattern?.wave1_start || 1)) *
-              100
-            }
-            confidence={stock.wavePattern?.confidence || 0}
-            waveStatus={stock.wavePattern?.status || ""}
-            onClick={() =>
-              onStockSelect?.(
-                stock.symbol,
-                filteredStocks.map((s) => s.symbol),
-              )
-            }
-            prices={stock.prices || []}
-            timeframe={stock.wavePattern?.timeframe || "1h"}
-            wavePattern={stock.wavePattern}
-          />
-        ))}
+        .map((stock) => {
+          // Create navigation list with timeframe and wave status
+          const navigationList = filteredStocks.map(s => ({
+            symbol: s.symbol,
+            timeframe: s.wavePattern?.timeframe || "1h",
+            waveStatus: s.wavePattern?.status || ""
+          }));
+
+          return (
+            <StockCard
+              key={`${stock.symbol}-${stock.wavePattern?.timeframe}-${stock.wavePattern?.status}`}
+              symbol={stock.symbol}
+              price={stock.wavePattern?.current_price || 0}
+              change={
+                (((stock.wavePattern?.current_price || 0) -
+                  (stock.wavePattern?.wave1_start || 0)) /
+                  (stock.wavePattern?.wave1_start || 1)) *
+                100
+              }
+              confidence={stock.wavePattern?.confidence || 0}
+              waveStatus={stock.wavePattern?.status || ""}
+              onClick={() =>
+                onStockSelect?.(
+                  stock.symbol,
+                  navigationList,
+                  stock.wavePattern?.timeframe,
+                  stock.wavePattern?.status
+                )
+              }
+              prices={stock.prices || []}
+              timeframe={stock.wavePattern?.timeframe || "1h"}
+              wavePattern={stock.wavePattern}
+            />
+          );
+        })}
     </div>
   );
 };
