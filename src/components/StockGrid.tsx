@@ -70,37 +70,52 @@ const StockGrid = ({
           );
         })
         .map((stock) => {
+          const thisStockWavePattern = stock.wavePattern;
+          
           // Create navigation list with timeframe and wave status
-          const navigationList = filteredStocks.map(s => ({
-            symbol: s.symbol,
-            timeframe: s.wavePattern?.timeframe || "1h",
-            waveStatus: s.wavePattern?.status || ""
-          }));
+          const navigationList = filteredStocks
+            .filter(Boolean)
+            .map(s => ({
+              symbol: s.symbol,
+              timeframe: s.wavePattern?.timeframe || "1h",
+              waveStatus: s.wavePattern?.status || ""
+            }));
+
+          console.log('Rendering card:', {
+            symbol: stock.symbol,
+            timeframe: thisStockWavePattern?.timeframe,
+            waveStatus: thisStockWavePattern?.status
+          });
 
           return (
             <StockCard
-              key={`${stock.symbol}-${stock.wavePattern?.timeframe}-${stock.wavePattern?.status}`}
+              key={`${stock.symbol}-${thisStockWavePattern?.timeframe}-${thisStockWavePattern?.status}`}
               symbol={stock.symbol}
-              price={stock.wavePattern?.current_price || 0}
+              price={thisStockWavePattern?.current_price || 0}
               change={
-                (((stock.wavePattern?.current_price || 0) -
-                  (stock.wavePattern?.wave1_start || 0)) /
-                  (stock.wavePattern?.wave1_start || 1)) *
+                (((thisStockWavePattern?.current_price || 0) -
+                  (thisStockWavePattern?.wave1_start || 0)) /
+                  (thisStockWavePattern?.wave1_start || 1)) *
                 100
               }
-              confidence={stock.wavePattern?.confidence || 0}
-              waveStatus={stock.wavePattern?.status || ""}
-              onClick={() =>
+              confidence={thisStockWavePattern?.confidence || 0}
+              waveStatus={thisStockWavePattern?.status || ""}
+              onClick={() => {
+                console.log('StockGrid onClick:', {
+                  symbol: stock.symbol,
+                  timeframe: thisStockWavePattern?.timeframe,
+                  waveStatus: thisStockWavePattern?.status
+                });
                 onStockSelect?.(
                   stock.symbol,
                   navigationList,
-                  stock.wavePattern?.timeframe,
-                  stock.wavePattern?.status
-                )
-              }
+                  thisStockWavePattern?.timeframe,
+                  thisStockWavePattern?.status
+                );
+              }}
               prices={stock.prices || []}
-              timeframe={stock.wavePattern?.timeframe || "1h"}
-              wavePattern={stock.wavePattern}
+              timeframe={thisStockWavePattern?.timeframe || "1h"}
+              wavePattern={thisStockWavePattern}
             />
           );
         })}

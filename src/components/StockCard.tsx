@@ -11,35 +11,34 @@ import {
 } from "./ui/tooltip";
 
 interface StockCardProps {
-  symbol?: string;
-  price?: number;
-  change?: number;
-  confidence?: number;
-  waveStatus?: string;
+  symbol: string;
+  price: number;
+  change: number;
+  confidence: number;
+  waveStatus: string;
   onClick?: () => void;
   prices?: Array<{
     timestamp: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    timeframe?: string;
+    price: number;
+    timeframe: string;
   }>;
   timeframe?: string;
   wavePattern?: {
-    timeframe?: string;
+    timeframe: string;
+    status: string;
+    // ... other wave pattern properties
   };
 }
 
 function StockCard({
-  symbol = "AAPL",
-  price = 150.25,
-  change = 2.5,
-  confidence = 85,
-  waveStatus = "Wave 5 Bullish",
-  onClick = () => {},
+  symbol,
+  price,
+  change,
+  confidence,
+  waveStatus,
+  onClick,
   prices = [],
-  timeframe = "1d",
+  timeframe = "1h",
   wavePattern,
 }: StockCardProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -108,7 +107,7 @@ function StockCard({
           )
           .map((price) => ({
             time: Math.floor(new Date(price.timestamp).getTime() / 1000),
-            value: price.close,
+            value: price.price,
           }));
 
         areaSeries.setData(data);
@@ -169,7 +168,12 @@ function StockCard({
   }, [prices, change, timeframe]);
 
   const handleClick = () => {
-    onClick();
+    console.log('StockCard clicked:', {
+      symbol,
+      cardTimeframe: wavePattern?.timeframe,
+      cardWaveStatus: wavePattern?.status
+    });
+    onClick?.();
   };
 
   const isPositive = change >= 0;

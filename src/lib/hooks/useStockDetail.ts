@@ -1,95 +1,56 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import type { WavePattern, StockPrice, Timeframe } from "../types";
+import type { WavePattern, StockPrice, Timeframe, WaveStatus } from "../types";
 
-export function useStockDetail(symbol: string, timeframe: Timeframe) {
+export function useStockDetail(
+  symbol: string, 
+  timeframe: string,
+  waveStatus: WaveStatus | "all"
+) {
   const [wavePattern, setWavePattern] = useState<WavePattern | null>(null);
   const [prices, setPrices] = useState<StockPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [stockDetail, setStockDetail] = useState<any>(null);
 
   useEffect(() => {
-    console.log("useStockDetail effect running for:", { symbol, timeframe });
+    console.log('useStockDetail effect running for:', { symbol, timeframe, waveStatus });
+    
     const fetchStockDetail = async () => {
       try {
-        const timeframes =
-          timeframe === "all" ? ["1h", "4h", "1d"] : [timeframe];
-
-        // Fetch stock details first
-        const { data: stockData, error: stockError } = await supabase
-          .from("stocks")
-          .select("*")
-          .eq("symbol", symbol)
-          .single();
-
-        if (stockError) {
-          console.warn("Error fetching stock details:", stockError);
-        }
-
-        // Fetch wave pattern
-        const { data: patternData, error: patternError } = await supabase
+        setLoading(true);
+        
+        // Fetch wave pattern for specific timeframe and wave status
+        const { data: wavePatterns, error: waveError } = await supabase
           .from("wave_patterns")
           .select("*")
           .eq("symbol", symbol)
-          .in("timeframe", timeframes)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
+          .eq("timeframe", timeframe)
+          .eq("status", waveStatus);
 
-        // Log the pattern data we found
-        console.log("Wave pattern data:", {
-          symbol,
-          timeframe,
-          patternData,
-          patternError,
-        });
+        if (waveError) throw waveError;
 
-        // Don't throw on pattern error, just set pattern to null
-        if (patternError) {
-          console.warn("No wave pattern found:", patternError);
-        }
-
-        // Fetch historical prices
-        console.log("Fetching prices with params:", { symbol, timeframe });
-        const { data: priceData, error: priceError } = await supabase
+        // Fetch prices for the specific timeframe
+        const { data: prices, error: pricesError } = await supabase
           .from("stock_prices")
           .select("*")
           .eq("symbol", symbol)
-          .in("timeframe", timeframes)
-          .order("timestamp", { ascending: false })
-          .limit(5000);
+          .eq("timeframe", timeframe)
+          .order("timestamp", { ascending: true });
 
-        if (!priceData?.length) {
-          console.warn("No price data found for:", { symbol, timeframe });
-        }
+        if (pricesError) throw pricesError;
 
-        console.log("Fetched price data:", {
+        setStockDetail({
           symbol,
           timeframe,
-          priceData,
-          priceError,
+          waveStatus,
+          wavePattern: wavePatterns?.[0] || null, // Take first wave pattern if exists
+          prices: prices || []
         });
-
-        if (priceError) throw priceError;
-
-        // Set wave pattern (might be null if not found)
-        setWavePattern(
-          patternData
-            ? {
-                ...patternData,
-                name: stockData?.name || symbol,
-                market_cap: stockData?.market_cap || 0,
-              }
-            : null,
-        );
-        // Always set prices if we have them
-        setPrices(priceData || []);
+        
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err
-            : new Error("Failed to fetch stock detail"),
-        );
+        console.error('Stock detail fetch error:', err);
+        setError(err instanceof Error ? err : new Error("Failed to fetch stock detail"));
       } finally {
         setLoading(false);
       }
@@ -134,7 +95,7 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
       waveSubscription.unsubscribe();
       priceSubscription.unsubscribe();
     };
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, waveStatus]);
 
-  return { wavePattern, prices, loading, error };
+  return { stockDetail, loading, error };
 }

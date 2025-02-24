@@ -27,33 +27,37 @@ interface DetailedStockViewProps {
   nextStock?: string;
 }
 
-const DetailedStockView = ({
-  isOpen = true,
-  onClose = () => {},
+const DetailedStockView: React.FC<DetailedStockViewProps> = ({
+  isOpen,
+  onClose,
   symbol,
   timeframe,
   waveStatus,
-  onTimeframeChange = () => {},
-  onWaveStatusChange = () => {},
-  onNavigate = () => {},
+  onTimeframeChange,
+  onWaveStatusChange,
+  onNavigate,
   prevStock,
   nextStock,
-}: DetailedStockViewProps) => {
+}) => {
+  const { stockDetail, loading, error } = useStockDetail(symbol, timeframe, waveStatus);
+
+  console.log('DetailedStockView rendered:', {
+    symbol,
+    timeframe,
+    waveStatus,
+    stockDetail
+  });
+
   const [showElliottWave, setShowElliottWave] = useState(true);
   const [showFibonacci, setShowFibonacci] = useState(false);
   const [stockName, setStockName] = useState<string>("");
 
-  const { wavePattern, prices, loading, error } = useStockDetail(
-    symbol,
-    timeframe,
-  );
-
   // Update stock name when wave pattern changes
   React.useEffect(() => {
-    if (wavePattern?.name) {
-      setStockName(wavePattern.name);
+    if (stockDetail?.wavePattern?.name) {
+      setStockName(stockDetail.wavePattern.name);
     }
-  }, [wavePattern?.name]);
+  }, [stockDetail?.wavePattern?.name]);
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -80,8 +84,8 @@ const DetailedStockView = ({
             <h2 className="text-xl font-semibold">
               {stockName} ({symbol})
             </h2>
-            {wavePattern && (
-              <Badge variant="secondary">{wavePattern.status}</Badge>
+            {stockDetail?.wavePattern && (
+              <Badge variant="secondary">{stockDetail.wavePattern.status}</Badge>
             )}
           </div>
           <Button
@@ -108,31 +112,31 @@ const DetailedStockView = ({
               symbol={symbol}
               timeframe={timeframe}
               onTimeframeChange={onTimeframeChange}
-              prices={prices}
-              wavePattern={wavePattern}
+              prices={stockDetail.prices}
+              wavePattern={stockDetail.wavePattern}
               showElliottWave={showElliottWave}
               showFibonacci={showFibonacci}
               onToggleElliottWave={setShowElliottWave}
               onToggleFibonacci={setShowFibonacci}
             />
-            {wavePattern && (
+            {stockDetail.wavePattern && (
               <AIPredictions
-                currentPrice={wavePattern.current_price}
-                wavePattern={wavePattern}
+                currentPrice={stockDetail.wavePattern.current_price}
+                wavePattern={stockDetail.wavePattern}
                 targets={[
                   {
-                    price: wavePattern.target_price1,
-                    confidence: wavePattern.confidence,
+                    price: stockDetail.wavePattern.target_price1,
+                    confidence: stockDetail.wavePattern.confidence,
                     type: "resistance",
                   },
                   {
-                    price: wavePattern.target_price2,
-                    confidence: Math.max(wavePattern.confidence - 10, 0),
+                    price: stockDetail.wavePattern.target_price2,
+                    confidence: Math.max(stockDetail.wavePattern.confidence - 10, 0),
                     type: "resistance",
                   },
                   {
-                    price: wavePattern.target_price3,
-                    confidence: Math.max(wavePattern.confidence - 20, 0),
+                    price: stockDetail.wavePattern.target_price3,
+                    confidence: Math.max(stockDetail.wavePattern.confidence - 20, 0),
                     type: "resistance",
                   },
                 ]}

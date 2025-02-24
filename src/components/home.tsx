@@ -45,6 +45,31 @@ const Home = () => {
     setSelectedTimeframe(tf);
   };
 
+  const handleStockSelect = (
+    symbol: string,
+    navList: Array<{ symbol: string; timeframe: string; waveStatus: string }>,
+    clickedTimeframe?: string,
+    clickedWaveStatus?: string
+  ) => {
+    console.log('Stock selected:', {
+      symbol,
+      clickedTimeframe,
+      clickedWaveStatus,
+      navList
+    });
+
+    setSelectedStock(symbol);
+    setNavigationList(navList);
+    
+    // Always set the timeframe and wave status from the clicked card
+    if (clickedTimeframe) {
+      setSelectedDetailTimeframe(clickedTimeframe as Timeframe);
+    }
+    if (clickedWaveStatus) {
+      setSelectedDetailWaveStatus(clickedWaveStatus as WaveStatus);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
@@ -73,12 +98,7 @@ const Home = () => {
           searchQuery={searchQuery}
           timeframe={selectedTimeframe}
           waveStatus={selectedWaveStatus}
-          onStockSelect={(symbol, navList, timeframe, waveStatus) => {
-            setSelectedStock(symbol);
-            if (navList) setNavigationList(navList);
-            if (timeframe) setSelectedDetailTimeframe(timeframe as Timeframe);
-            if (waveStatus) setSelectedDetailWaveStatus(waveStatus as WaveStatus);
-          }}
+          onStockSelect={handleStockSelect}
         />
       </main>
 
