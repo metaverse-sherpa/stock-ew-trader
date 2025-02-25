@@ -2,9 +2,9 @@ import * as React from "react"
 import { Cross2Icon } from "@radix-ui/react-icons"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@/lib/utils"
-
+import { useToast } from "./use-toast.tsx"
+import { cn } from "../../lib/utils.ts"
+    
 const ToastProvider = ToastPrimitives.Provider
 
 const ToastViewport = React.forwardRef<
@@ -124,4 +124,33 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
+}
+
+export const ToastNotification = () => {
+  const { toasts, dismissToast } = useToast()
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={cn(
+            "flex items-center justify-between p-4 rounded-md shadow-lg bg-background border",
+            toast.variant === "destructive" && "bg-destructive text-destructive-foreground"
+          )}
+        >
+          <div>
+            <p className="font-medium">{toast.title}</p>
+            <p className="text-sm">{toast.description}</p>
+          </div>
+          <button
+            onClick={() => dismissToast(toast.id)}
+            className="ml-4 p-1 rounded-full hover:bg-accent"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  )
 }

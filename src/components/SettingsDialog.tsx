@@ -1,5 +1,9 @@
+import React from 'react';
 import { useState, useRef, useEffect } from "react";
-import { useToast } from "./ui/use-toast";
+import { useToast } from "./ui/use-toast.tsx";
+import yahooFinance from 'yahoo-finance2';
+import { Dialog as CustomDialog } from './Dialog';
+import { BubbleNotification } from './BubbleNotification';
 import {
   Dialog,
   DialogContent,
@@ -40,10 +44,10 @@ interface SettingsDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function SettingsDialog({
+export const SettingsDialog = ({
   onTimeframeChange,
   trigger,
-}: SettingsDialogProps = {}) {
+}: SettingsDialogProps = {}) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [analysisState, setAnalysisState] = useState<{
@@ -145,12 +149,12 @@ export function SettingsDialog({
       const { error } = await supabase
         .from('stocks')
         .insert([{ symbol: uppercaseSymbol, needs_update: true }]);
-  
+
       if (error) {
         showToast("Error", error.code === '23505' ? `Symbol "${uppercaseSymbol}" already exists.` : `Failed to add symbol: ${error.message}`, "destructive");
         return;
       }
-  
+
       showToast("Success", `Symbol "${uppercaseSymbol}" added successfully!`);
     } catch (err) {
       showToast("Error", `Failed to add symbol: ${err.message}`, "destructive");
@@ -158,108 +162,92 @@ export function SettingsDialog({
   };
 
   return (
-    <div className="relative">
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          {trigger || (
-            <Button variant="outline" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-          )}
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
-            <DialogDescription>
-              Configure wave analysis and other settings
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Default Timeframe</Label>
-                <p className="text-sm text-muted-foreground">
-                  Select your preferred default timeframe
-                </p>
-              </div>
-              <Select
-                value={defaultTimeframe}
-                onValueChange={handleTimeframeChange}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Select timeframe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1h">1h</SelectItem>
-                  <SelectItem value="4h">4h</SelectItem>
-                  <SelectItem value="1d">1d</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Automatic Wave Analysis</Label>
-                <p className="text-sm text-muted-foreground">
-                  Run wave analysis daily at midnight
-                </p>
-              </div>
-              <Switch
-                checked={autoAnalysis}
-                onCheckedChange={handleAutoAnalysisChange}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Add Stock Symbol</Label>
-                <AddStockSymbol onAddSymbol={handleAddSymbol} />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label>Manual Wave Analysis</Label>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Analyze current price data for wave patterns
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAnalyzeWaves}
-                    disabled={analysisState.isAnalyzing}
-                  >
-                    {analysisState.isAnalyzing ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      "Analyze Now"
-                    )}
-                  </Button>
-                </div>
-
-                {analysisState.progress && (
-                  <div className="mt-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>{analysisState.progress.symbol} ({analysisState.progress.timeframe})</span>
-                      <span>{Math.round((analysisState.progress.completed / analysisState.progress.total) * 100)}%</span>
-                    </div>
-                    <Progress
-                      value={(analysisState.progress.completed / analysisState.progress.total) * 100}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {analysisState.progress.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Processed {analysisState.progress.completed} of {analysisState.progress.total} items
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+    <CustomDialog
+      title="Settings"
+      trigger={trigger}
+      onClose={() => setIsOpen(false)}
+    >
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label>Default Timeframe</Label>
+            <p className="text-sm text-muted-foreground">
+              Select your preferred default timeframe
+            </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <Select
+            value={defaultTimeframe}
+            onValueChange={handleTimeframeChange}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="Select timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1h">1h</SelectItem>
+              <SelectItem value="4h">4h</SelectItem>
+              <SelectItem value="1d">1d</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label>Automatic Wave Analysis</Label>
+            <p className="text-sm text-muted-foreground">
+              Run wave analysis daily at midnight
+            </p>
+          </div>
+          <Switch
+            checked={autoAnalysis}
+            onCheckedChange={handleAutoAnalysisChange}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <AddStockSymbol onAddSymbol={handleAddSymbol} />
+
+          <div className="flex flex-col gap-2">
+            <Label>Manual Wave Analysis</Label>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Analyze current price data for wave patterns
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAnalyzeWaves}
+                disabled={analysisState.isAnalyzing}
+              >
+                {analysisState.isAnalyzing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Analyze Now"
+                )}
+              </Button>
+            </div>
+
+            {analysisState.progress && (
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{analysisState.progress.symbol} ({analysisState.progress.timeframe})</span>
+                  <span>{Math.round((analysisState.progress.completed / analysisState.progress.total) * 100)}%</span>
+                </div>
+                <Progress
+                  value={(analysisState.progress.completed / analysisState.progress.total) * 100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {analysisState.progress.message}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Processed {analysisState.progress.completed} of {analysisState.progress.total} items
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </CustomDialog>
   );
-}
+};
