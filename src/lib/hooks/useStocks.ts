@@ -35,52 +35,88 @@ export function useStocks(
     
     const fetchStocks = async () => {
       try {
-        // Get wave patterns for each timeframe
+        console.log('Fetching wave patterns for:', { selectedTimeframe, waveStatus });
+
+        // Step 1: Build the query
         const query = supabase
           .from("wave_patterns")
           .select("*")
-          // Only query specific timeframe unless "all" is selected
           .in("timeframe", selectedTimeframe === "all" ? ["1h", "4h", "1d"] : [selectedTimeframe]);
 
-        // Only add the status filter if not "all"
         if (waveStatus !== "all") {
           query.eq("status", waveStatus);
         }
 
+        console.log('Query built:', query);
+
+        // Step 2: Execute the query
         const { data: wavePatterns, error: waveError } = await query;
 
-        if (waveError) throw waveError;
+        if (waveError) {
+          console.error('Supabase wave patterns query error:', {
+            message: waveError.message,
+            code: waveError.code,
+            details: waveError.details,
+          });
+          throw waveError;
+        }
 
-        // Get unique symbols from wave patterns
+        console.log('Wave patterns fetched:', wavePatterns);
+
+        // Step 3: Get unique symbols
         const symbols = [...new Set(wavePatterns.map(wp => wp.symbol))];
+        console.log('Unique symbols:', symbols);
 
-        // If no wave patterns found and waveStatus is "all", fetch all stocks for the timeframe
+        // Step 4: Handle empty results
         if (symbols.length === 0 && waveStatus === "all") {
+          console.log('No wave patterns found, fetching all patterns for timeframe:', selectedTimeframe);
           const { data: allWavePatterns, error: allWaveError } = await supabase
             .from("wave_patterns")
             .select("*")
             .in("timeframe", selectedTimeframe === "all" ? ["1h", "4h", "1d"] : [selectedTimeframe]);
 
-          if (allWaveError) throw allWaveError;
+          if (allWaveError) {
+            console.error('Supabase all wave patterns query error:', {
+              message: allWaveError.message,
+              code: allWaveError.code,
+              details: allWaveError.details,
+            });
+            throw allWaveError;
+          }
+
           symbols.push(...new Set(allWavePatterns.map(wp => wp.symbol)));
           wavePatterns.push(...allWavePatterns);
+          console.log('All wave patterns fetched:', allWavePatterns);
         }
 
-        // Fetch all stocks data for these symbols
+        // Step 5: Fetch stock data
+        console.log('Fetching stock data for symbols:', symbols);
         const { data: stocks, error: stocksError } = await supabase
           .from("stocks")
           .select("*")
           .in("symbol", symbols);
 
-        if (stocksError) throw stocksError;
+        if (stocksError) {
+          console.error('Supabase stocks query error:', {
+            message: stocksError.message,
+            code: stocksError.code,
+            details: stocksError.details,
+          });
+          throw stocksError;
+        }
 
-        // For each wave pattern, fetch its corresponding price data
+        console.log('Stocks fetched:', stocks);
+
+        // Step 6: Fetch price data
+        console.log('Fetching price data for wave patterns');
         const stocksWithPrices = await Promise.all(
           wavePatterns.map(async (pattern) => {
             const stock = stocks.find(s => s.symbol === pattern.symbol);
-            if (!stock) return null;
+            if (!stock) {
+              console.warn('No stock found for symbol:', pattern.symbol);
+              return null;
+            }
 
-            // Fetch prices for this specific symbol and timeframe
             const { data: prices, error: pricesError } = await supabase
               .from("stock_prices")
               .select("*")
@@ -88,24 +124,30 @@ export function useStocks(
               .eq("timeframe", pattern.timeframe)
               .order("timestamp", { ascending: true });
 
-            if (pricesError) throw pricesError;
+            if (pricesError) {
+              console.error('Supabase stock prices query error:', {
+                message: pricesError.message,
+                code: pricesError.code,
+                details: pricesError.details,
+              });
+              throw pricesError;
+            }
 
             return {
               ...stock,
               symbol: pattern.symbol,
               prices: prices?.map(price => ({
                 ...price,
-                timeframe: pattern.timeframe
+                timeframe: pattern.timeframe,
               })) || [],
-              wavePattern: pattern
+              wavePattern: pattern,
             };
           })
         );
 
-        // Filter out any null values and ensure unique combinations
+        // Step 7: Filter and cache results
         const validStocksWithPrices = stocksWithPrices
           .filter(Boolean)
-          // Remove duplicates based on symbol + timeframe + status combination
           .filter((stock, index, self) => {
             const key = `${stock.symbol}-${stock.wavePattern?.timeframe}-${stock.wavePattern?.status}`;
             return index === self.findIndex(s => 
@@ -113,11 +155,24 @@ export function useStocks(
             );
           });
 
+        console.log('Valid stocks with prices:', validStocksWithPrices);
         dataCache[cacheKey] = validStocksWithPrices;
         setStocks(validStocksWithPrices);
         setLoading(false);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error("Failed to fetch stocks"));
+        console.error('Detailed error fetching stocks:', {
+          error: err,
+          errorMessage: err instanceof Error ? err.message : 'Unknown error',
+          errorStack: err instanceof Error ? err.stack : 'No stack trace',
+          cacheKey,
+          selectedTimeframe,
+          waveStatus,
+        });
+        setError(
+          new Error(
+            `Failed to fetch stocks: ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+          ),
+        );
         setLoading(false);
       }
     };

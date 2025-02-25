@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+import TradingViewChart from "./TradingViewChart";
 
 interface StockCardProps {
   symbol: string;
@@ -42,6 +43,15 @@ function StockCard({
   wavePattern,
 }: StockCardProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  console.log('StockCard rendering:', {
+    symbol,
+    price,
+    confidence,
+    waveStatus,
+    pricesLength: prices.length,
+    timeframe,
+  });
 
   useEffect(() => {
     if (!chartContainerRef.current || !prices?.length) {
@@ -233,9 +243,11 @@ function StockCard({
           </div>
         </div>
 
-        <div
-          className="mt-4 h-[120px] bg-muted rounded-lg overflow-hidden"
-          ref={chartContainerRef}
+        <TradingViewChart
+          symbol={symbol}
+          timeframe={timeframe}
+          prices={prices}
+          wavePattern={wavePattern}
         />
       </CardContent>
     </Card>

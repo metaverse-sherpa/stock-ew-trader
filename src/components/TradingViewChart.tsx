@@ -46,301 +46,93 @@ const TradingViewChart = ({
   }, [prices]);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    // Clear existing chart and series
-    if (chartRef.current) {
-      try {
-        chartRef.current.remove();
-      } catch (e) {
-        console.warn("Chart already disposed");
-      }
-      chartRef.current = null;
-      waveSeriesRef.current = [];
-    }
-
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#d1d5db",
-      },
-      grid: {
-        vertLines: { color: "#2c2c2c" },
-        horzLines: { color: "#2c2c2c" },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: 450,
+    console.log('TradingViewChart useEffect triggered:', {
+      pricesLength: prices?.length,
+      change,
+      chartContainerRef: chartContainerRef.current,
+      containerWidth: chartContainerRef.current?.clientWidth,
+      containerHeight: chartContainerRef.current?.clientHeight,
     });
 
-    chartRef.current = chart;
-
-    // Add candlestick series
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: "#22c55e",
-      downColor: "#ef4444",
-      borderVisible: false,
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
-    });
-
-    // Filter prices for current timeframe and convert timestamps
-    const priceData = [...prices]
-      .filter((price) => price.timeframe === timeframe)
-      .map((price) => ({
-        time: Math.floor(new Date(price.timestamp).getTime() / 1000),
-        open: price.open,
-        high: price.high,
-        low: price.low,
-        close: price.close,
-        volume: price.volume,
-      }))
-      .sort((a, b) => a.time - b.time);
-
-    // If we have a wave pattern, ensure we show enough data before wave 1
-    if (wavePattern) {
-      const wave1StartTime = Math.floor(
-        new Date(wavePattern.wave1_start_time).getTime() / 1000,
-      );
-      // For 1h and 4h show more pre-wave data
-      const preWaveDays = timeframe === "1d" ? 30 : 90;
-      const minDataTime = wave1StartTime - 86400 * preWaveDays;
-      const filteredPriceData = priceData.filter((p) => p.time >= minDataTime);
-      candlestickSeries.setData(filteredPriceData);
-    } else {
-      candlestickSeries.setData(priceData);
+    if (!chartContainerRef.current || !prices?.length) {
+      console.error("Missing requirements for TradingView chart:", {
+        hasContainer: !!chartContainerRef.current,
+        pricesLength: prices?.length,
+      });
+      return;
     }
 
-    // Add Elliott Wave patterns if available and enabled
-    if (wavePattern && showElliottWave && wavePattern.timeframe === timeframe) {
-      // Add wave lines
-      const waveSeries = chart.addLineSeries({
-        color: "#ffffff",
+    try {
+      console.log('Initializing TradingView chart...');
+
+      const chart = createChart(chartContainerRef.current!, {
+        layout: {
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#d1d5db",
+        },
+        grid: {
+          vertLines: { visible: false },
+          horzLines: { visible: false },
+        },
+        width: chartContainerRef.current.clientWidth,
+        height: 120,
+        rightPriceScale: {
+          visible: false,
+        },
+        timeScale: {
+          visible: false,
+        },
+        handleScroll: false,
+        handleScale: false,
+      });
+
+      console.log('TradingView chart initialized successfully:', chart);
+
+      const areaSeries = chart.addAreaSeries({
+        lineColor: change >= 0 ? "#22c55e" : "#ef4444",
+        topColor:
+          change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
+        bottomColor:
+          change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
         lineWidth: 2,
-        title: "Elliott Waves",
       });
 
-      // Create wave points
-      const wavePoints = [
-        {
-          time: Math.floor(
-            new Date(wavePattern.wave1_start_time).getTime() / 1000,
-          ),
-          value: wavePattern.wave1_start,
-        },
-        {
-          time: Math.floor(
-            new Date(wavePattern.wave1_end_time).getTime() / 1000,
-          ),
-          value: wavePattern.wave1_end,
-        },
-        {
-          time: Math.floor(
-            new Date(wavePattern.wave2_end_time).getTime() / 1000,
-          ),
-          value: wavePattern.wave2_end,
-        },
-        {
-          time: Math.floor(
-            new Date(wavePattern.wave3_end_time).getTime() / 1000,
-          ),
-          value: wavePattern.wave3_end,
-        },
-        {
-          time: Math.floor(
-            new Date(wavePattern.wave4_end_time).getTime() / 1000,
-          ),
-          value: wavePattern.wave4_end,
-        },
-      ]
-        .filter(
-          (point) =>
-            !isNaN(point.time) &&
-            point.value !== null &&
-            point.value !== undefined &&
-            !isNaN(point.value),
+      const data = prices
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         )
-        .sort((a, b) => a.time - b.time);
+        .map((price) => ({
+          time: Math.floor(new Date(price.timestamp).getTime() / 1000),
+          value: price.price,
+        }));
 
-      // Add Wave 5 point if available
-      if (wavePattern.wave5_end && wavePattern.wave5_end_time) {
-        const time = Math.floor(
-          new Date(wavePattern.wave5_end_time).getTime() / 1000,
-        );
-        if (!isNaN(time) && !isNaN(wavePattern.wave5_end)) {
-          wavePoints.push({
-            time,
-            value: wavePattern.wave5_end,
-          });
-          wavePoints.sort((a, b) => a.time - b.time);
-        }
-      }
+      console.log('Passing data to TradingView chart:', data);
 
-      // Set wave points without filtering
-      waveSeries.setData(wavePoints);
-      waveSeriesRef.current.push(waveSeries);
+      areaSeries.setData(data);
+      chart.timeScale().fitContent();
 
-      // Add wave labels with position info
-      const waveLabels = [
-        {
-          time: wavePattern.wave1_end_time,
-          text: "1",
-          price: wavePattern.wave1_end,
-          isBullish: true, // Wave 1 is bullish
-        },
-        {
-          time: wavePattern.wave2_end_time,
-          text: "2",
-          price: wavePattern.wave2_end,
-          isBullish: false, // Wave 2 is bearish
-        },
-        {
-          time: wavePattern.wave3_end_time,
-          text: "3",
-          price: wavePattern.wave3_end,
-          isBullish: true, // Wave 3 is bullish
-        },
-        {
-          time: wavePattern.wave4_end_time,
-          text: "4",
-          price: wavePattern.wave4_end,
-          isBullish: false, // Wave 4 is bearish
-        },
-      ];
+      console.log('Data successfully loaded into TradingView chart');
 
-      if (wavePattern.wave5_end && wavePattern.wave5_end_time) {
-        waveLabels.push({
-          time: wavePattern.wave5_end_time,
-          text: "5",
-          price: wavePattern.wave5_end,
-          isBullish: true, // Wave 5 is bullish
-        });
-      }
-
-      // Add wave labels
-      console.log("Wave labels data:", waveLabels);
-
-      // Filter out any invalid wave labels
-      const validWaveLabels = waveLabels.filter((label) => {
-        const isValid = label.time && !isNaN(new Date(label.time).getTime());
-        if (!isValid) {
-          console.warn("Invalid wave label:", label);
-        }
-        return isValid;
+      return () => {
+        console.log('Cleaning up TradingView chart');
+        chart.remove();
+      };
+    } catch (error) {
+      console.error('Error initializing or loading data into TradingView chart:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : 'No stack trace',
       });
-
-      console.log("Valid wave labels:", validWaveLabels);
-
-      // Create a separate series for each wave label
-      validWaveLabels.forEach(({ time, text, price, isBullish }) => {
-        const markerTime = Math.floor(new Date(time).getTime() / 1000);
-        const labelSeries = chart.addLineSeries({
-          color: "transparent",
-          lastValueVisible: false,
-          priceLineVisible: false,
-        });
-
-        // Add a single data point for this label
-        labelSeries.setData([{ time: markerTime, value: price }]);
-
-        // Add the marker
-        labelSeries.setMarkers([
-          {
-            time: markerTime,
-            position: isBullish ? "aboveBar" : "belowBar",
-            color: "#ffffff",
-            shape: "circle",
-            text,
-            size: 1,
-            textColor: "#ffffff",
-            backgroundColor: "#8b5cf6",
-            borderColor: "#8b5cf6",
-            borderWidth: 1,
-            fontSize: 12,
-          },
-        ]);
-
-        waveSeriesRef.current.push(labelSeries);
-      });
-
-      // Add target price projections based on wave status
-      if (
-        (wavePattern.status === "Wave 5 Bullish" ||
-          wavePattern.status === "Wave A" ||
-          wavePattern.status === "Wave B") &&
-        priceData.length > 0
-      ) {
-        // Different starting points based on wave status
-        let startPrice, startTime;
-        if (wavePattern.status === "Wave A") {
-          startPrice = wavePattern.wave5_end;
-          startTime = wavePattern.wave5_end_time;
-        } else if (wavePattern.status === "Wave B") {
-          startPrice = wavePattern.wave_a_end;
-          startTime = wavePattern.wave_a_end_time;
-        } else {
-          startPrice = wavePattern.wave4_end;
-          startTime = wavePattern.wave4_end_time;
-        }
-
-        // Add projection lines for each target
-        const targetLines = [
-          {
-            price: wavePattern.target_price1,
-            color: "#22c55e",
-            label: "Target 1",
-          },
-          {
-            price: wavePattern.target_price2,
-            color: "#8b5cf6",
-            label: "Target 2",
-          },
-          {
-            price: wavePattern.target_price3,
-            color: "#ec4899",
-            label: "Target 3",
-          },
-        ];
-
-        targetLines.forEach(({ price, color, label }) => {
-          const projectionLine = chart.addLineSeries({
-            color: color,
-            lineWidth: 1,
-            lineStyle: 2, // Dashed
-            title: label,
-          });
-
-          const startTimeSeconds = Math.floor(
-            new Date(startTime).getTime() / 1000,
-          );
-          const projectionDays = 30;
-          const endTimeSeconds = startTimeSeconds + 86400 * projectionDays;
-
-          projectionLine.setData([
-            { time: startTimeSeconds, value: startPrice },
-            { time: endTimeSeconds, value: price },
-          ]);
-
-          waveSeriesRef.current.push(projectionLine);
-        });
-      }
     }
+  }, [prices, change]);
 
-    // Fit content after all data is set
-    chart.timeScale().fitContent();
-
-    // Cleanup
-    return () => {
-      if (chartRef.current) {
-        try {
-          chartRef.current.remove();
-          chartRef.current = null;
-          waveSeriesRef.current = [];
-        } catch (e) {
-          console.warn("Error disposing chart:", e);
-        }
-      }
-    };
-  }, [prices, wavePattern, showElliottWave, showFibonacci]);
+  console.log('TradingViewChart rendering:', {
+    symbol,
+    timeframe,
+    pricesLength: prices?.length,
+    change,
+  });
 
   return (
     <div className="space-y-4">

@@ -33,6 +33,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "./ui/input";
+import yahooFinance from 'yahoo-finance2';
+import { Dialog as CustomDialog } from './Dialog'; // Import your custom dialog component
+import { BubbleNotification } from './BubbleNotification';
 
 interface SettingsDialogProps {
   onTimeframeChange?: (timeframe: Timeframe) => void;
@@ -67,6 +70,14 @@ export function SettingsDialog({
   const [isAddingSymbol, setIsAddingSymbol] = useState(false);
   const [existingSymbol, setExistingSymbol] = useState("");
   const [lastAddedSymbol, setLastAddedSymbol] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSettingsDisabled, setIsSettingsDisabled] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState({
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+  const [notification, setNotification] = useState<{ message: string; onConfirm?: () => void; onCancel?: () => void } | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -85,6 +96,13 @@ export function SettingsDialog({
 
     loadSettings();
   }, []);
+
+  // Log the notification state after it changes
+  useEffect(() => {
+    if (notification) {
+      console.log('Notification set:', notification);
+    }
+  }, [notification]);
 
   const handleTimeframeChange = async (value: string) => {
     setDefaultTimeframe(value as Timeframe);
@@ -143,65 +161,74 @@ export function SettingsDialog({
     console.log("Auto analysis:", enabled);
   };
 
-  const handleAddSymbol = async () => {
-    const symbol = newSymbol.trim().toUpperCase();
-    
-    if (!symbol) {
-      toast({
-        title: "Invalid Symbol",
-        description: "Please enter a valid stock symbol",
-        variant: "destructive",
-      });
-      return;
-    }
+  const showCustomDialog = ({ title, message, onConfirm }) => {
+    setDialogConfig({ title, message, onConfirm });
+    setIsDialogOpen(true);
+    setIsSettingsDisabled(true);
+  };
 
+  const handleAddSymbol = async (symbol: string) => {
     try {
-      setIsAddingSymbol(true);
+      // Convert the symbol to uppercase
+      const uppercaseSymbol = symbol.toUpperCase();
+      console.log('Adding symbol:', uppercaseSymbol);
 
-      // Check if symbol already exists
-      const { data: existingStock } = await supabase
-        .from("stocks")
-        .select("symbol")
-        .eq("symbol", symbol)
-        .single();
+      // Insert the symbol with needs_update = true
+      const { data, error } = await supabase
+        .from('stocks')
+        .insert([{ symbol: uppercaseSymbol, needs_update: true }]);
 
-      if (existingStock) {
-        setExistingSymbol(symbol);
-        setShowExistingSymbolDialog(true);
-        return;
+      if (error) {
+        // Handle duplicate symbol error
+        if (error.code === '23505') {
+          console.log('Symbol already exists:', uppercaseSymbol);
+          setNotification({ message: `Symbol "${uppercaseSymbol}" already exists in the system.` });
+          return;
+        }
+
+        // Handle other errors
+        console.error('Error adding symbol:', error);
+        throw error;
       }
 
-      // Add new stock
-      const { error: insertError } = await supabase
-        .from("stocks")
-        .insert([
-          {
-            symbol: symbol,
-            exchange: "NYSE",
-            name: symbol,
+      console.log('Symbol added successfully:', data);
+
+      // Show the interactive bubble notification to confirm data update and wave analysis
+      await new Promise((resolve) => {
+        setNotification({
+          message: 'Would you like to update data and analyze waves now?',
+          onConfirm: () => {
+            resolve(true); // User clicked "Yes"
           },
-        ]);
-
-      if (insertError) throw insertError;
-
-      setLastAddedSymbol(symbol);
-      setNewSymbol(""); // Clear input
-      setShowAnalyzePromptDialog(true);
-
-    } catch (error) {
-      console.error("Error adding symbol:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add symbol to database",
-        variant: "destructive",
+          onCancel: () => {
+            resolve(false); // User clicked "No"
+          },
+        });
+      }).then(async (shouldUpdate) => {
+        if (shouldUpdate) {
+          // Call the server-side script to update data and analyze waves
+          const response = await fetch('/api/updateStockData', { method: 'POST' });
+          if (response.ok) {
+            // Show a success message using the bubble notification
+            setNotification({ message: 'Data update and wave analysis completed!' });
+          } else {
+            // Show an error message if the update failed
+            setNotification({ message: 'Failed to update data. Please try again.' });
+          }
+        } else {
+          // User chose not to update data
+          setNotification({ message: 'Data update and wave analysis skipped.' });
+        }
       });
-    } finally {
-      setIsAddingSymbol(false);
+    } catch (err) {
+      console.error('Error adding symbol:', err);
+      // Show an error message using the bubble notification
+      setNotification({ message: 'Failed to add symbol. Please try again.' });
     }
   };
 
   return (
-    <>
+    <div className={`relative ${isSettingsDisabled ? 'pointer-events-none' : ''}`}>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           {trigger || (
@@ -264,14 +291,14 @@ export function SettingsDialog({
                     className="uppercase"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        handleAddSymbol();
+                        handleAddSymbol(newSymbol);
                       }
                     }}
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleAddSymbol}
+                    onClick={() => handleAddSymbol(newSymbol)}
                     disabled={isAddingSymbol || !newSymbol.trim()}
                   >
                     {isAddingSymbol ? (
@@ -402,6 +429,24 @@ export function SettingsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+
+      {/* Render the custom dialog */}
+      {isDialogOpen && (
+        <CustomDialog
+          title={dialogConfig.title}
+          message={dialogConfig.message}
+          onConfirm={dialogConfig.onConfirm}
+        />
+      )}
+
+      {/* Render the bubble notification */}
+      {notification && (
+        <BubbleNotification
+          message={notification.message}
+          onConfirm={notification.onConfirm}
+          onCancel={notification.onCancel}
+        />
+      )}
+    </div>
   );
 }

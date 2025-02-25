@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Card } from "./ui/card";
 import StockCard from "./StockCard";
 import { useStocks } from "@/lib/hooks/useStocks";
@@ -29,6 +29,16 @@ const StockGrid = ({
 }: StockGridProps) => {
   const { stocks, loading, error } = useStocks(timeframe, waveStatus);
 
+  useEffect(() => {
+    console.log('Stocks state:', stocks);
+  }, [stocks]);
+
+  useEffect(() => {
+    if (error) {
+      console.log('Error state:', error);
+    }
+  }, [error]);
+
   const filteredStocks = React.useMemo(() => {
     if (!searchQuery) return stocks;
     return stocks.filter((stock) =>
@@ -44,9 +54,20 @@ const StockGrid = ({
 
   if (error) {
     return (
-      <Card className="p-8 text-center">
-        <p className="text-destructive">Error loading stocks: {error.message}</p>
-      </Card>
+      <div className="p-4 text-red-500">
+        <h2 className="text-xl font-bold">Error Loading Stocks</h2>
+        <p>{error.message}</p>
+        <pre className="mt-2 text-sm bg-gray-100 p-2 rounded">
+          {JSON.stringify(
+            {
+              message: error.message,
+              stack: error.stack,
+            },
+            null,
+            2,
+          )}
+        </pre>
+      </div>
     );
   }
 
@@ -57,6 +78,8 @@ const StockGrid = ({
       </Card>
     );
   }
+
+  console.log('StockGrid rendering:', { stocks, loading, error });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -84,7 +107,8 @@ const StockGrid = ({
           console.log('Rendering card:', {
             symbol: stock.symbol,
             timeframe: thisStockWavePattern?.timeframe,
-            waveStatus: thisStockWavePattern?.status
+            waveStatus: thisStockWavePattern?.status,
+            prices: stock.prices
           });
 
           return (
