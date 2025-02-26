@@ -2,8 +2,8 @@ import React from 'react';
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "./ui/use-toast.tsx";
 import yahooFinance from 'yahoo-finance2';
-import { Dialog as CustomDialog } from './Dialog';
-import { BubbleNotification } from './BubbleNotification';
+import { Dialog as CustomDialog } from './Dialog.tsx';
+import { BubbleNotification } from './BubbleNotification.tsx';
 import {
   Dialog,
   DialogContent,
@@ -11,22 +11,22 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Switch } from "./ui/switch";
-import { Label } from "./ui/label";
+} from "./ui/dialog.tsx";
+import { Button } from "./ui/button.tsx";
+import { Switch } from "./ui/switch.tsx";
+import { Label } from "./ui/label.tsx";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "./ui/select.tsx";
 import { Settings, RefreshCw, Plus } from "lucide-react";
 import { WavePatternService } from "@/lib/services/wavePatternService";
 import { supabase } from "@/lib/supabase";
-import type { Timeframe } from "@/lib/types";
-import { Progress } from "./ui/progress";
+import type { Timeframe } from "../../lib/types";
+import { Progress } from "./ui/progress.tsx";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +35,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Input } from "./ui/input";
-import { AddStockSymbol } from "./AddStockSymbol";
+} from "../../components/ui/alert-dialog.tsx";
+import { Input } from "./ui/input.tsx";
+import { AddStockSymbol } from "./AddStockSymbol.tsx";
 
 interface SettingsDialogProps {
   onTimeframeChange?: (timeframe: Timeframe) => void;
@@ -146,108 +146,84 @@ export const SettingsDialog = ({
   const handleAddSymbol = async (symbol: string) => {
     try {
       const uppercaseSymbol = symbol.toUpperCase();
+      console.log(`Attempting to add symbol: ${uppercaseSymbol}`);
+      
       const { error } = await supabase
         .from('stocks')
         .insert([{ symbol: uppercaseSymbol, needs_update: true }]);
 
       if (error) {
-        showToast("Error", error.code === '23505' ? `Symbol "${uppercaseSymbol}" already exists.` : `Failed to add symbol: ${error.message}`, "destructive");
-        return;
+        console.error(`Error adding symbol ${uppercaseSymbol}:`, error);
+        throw error;
       }
 
+      console.log(`Successfully added symbol: ${uppercaseSymbol}`);
       showToast("Success", `Symbol "${uppercaseSymbol}" added successfully!`);
+
     } catch (err) {
-      showToast("Error", `Failed to add symbol: ${err.message}`, "destructive");
+      console.error(`Unexpected error adding symbol ${symbol}:`, err);
+      throw err;
     }
   };
 
   return (
-    <CustomDialog
-      title="Settings"
-      trigger={trigger}
-      onClose={() => setIsOpen(false)}
-    >
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+    <Dialog>
+      <DialogTrigger asChild>
+        {trigger}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Settings</DialogTitle>
+          <DialogDescription>
+            Configure your application settings
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
             <Label>Default Timeframe</Label>
-            <p className="text-sm text-muted-foreground">
-              Select your preferred default timeframe
-            </p>
+            <Select value={defaultTimeframe} onValueChange={handleTimeframeChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select timeframe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1h">1 Hour</SelectItem>
+                <SelectItem value="4h">4 Hours</SelectItem>
+                <SelectItem value="1d">1 Day</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={defaultTimeframe}
-            onValueChange={handleTimeframeChange}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="Select timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1h">1h</SelectItem>
-              <SelectItem value="4h">4h</SelectItem>
-              <SelectItem value="1d">1d</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Label>Automatic Wave Analysis</Label>
-            <p className="text-sm text-muted-foreground">
-              Run wave analysis daily at midnight
-            </p>
+          
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="auto-analysis" 
+              checked={autoAnalysis} 
+              onCheckedChange={handleAutoAnalysisChange}
+            />
+            <Label htmlFor="auto-analysis">Automatic Analysis</Label>
           </div>
-          <Switch
-            checked={autoAnalysis}
-            onCheckedChange={handleAutoAnalysisChange}
-          />
-        </div>
 
-        <div className="space-y-4">
           <AddStockSymbol onAddSymbol={handleAddSymbol} />
 
-          <div className="flex flex-col gap-2">
-            <Label>Manual Wave Analysis</Label>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Analyze current price data for wave patterns
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAnalyzeWaves}
-                disabled={analysisState.isAnalyzing}
-              >
-                {analysisState.isAnalyzing ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                    Analyzing...
-                  </>
-                ) : (
-                  "Analyze Now"
-                )}
-              </Button>
-            </div>
+          <Button 
+            onClick={handleAnalyzeWaves} 
+            disabled={analysisState.isAnalyzing}
+          >
+            {analysisState.isAnalyzing ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Analyze Wave Patterns
+          </Button>
 
-            {analysisState.progress && (
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>{analysisState.progress.symbol} ({analysisState.progress.timeframe})</span>
-                  <span>{Math.round((analysisState.progress.completed / analysisState.progress.total) * 100)}%</span>
-                </div>
-                <Progress
-                  value={(analysisState.progress.completed / analysisState.progress.total) * 100}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {analysisState.progress.message}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Processed {analysisState.progress.completed} of {analysisState.progress.total} items
-                </p>
-              </div>
-            )}
-          </div>
+          {analysisState.progress && (
+            <div className="space-y-2">
+              <p>{analysisState.progress.message}</p>
+              <Progress 
+                value={(analysisState.progress.completed / analysisState.progress.total) * 100}
+              />
+            </div>
+          )}
         </div>
-      </div>
-    </CustomDialog>
+      </DialogContent>
+    </Dialog>
   );
 };

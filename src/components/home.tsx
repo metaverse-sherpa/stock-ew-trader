@@ -80,16 +80,7 @@ const Home = () => {
         isDarkMode={isDarkMode}
         selectedTimeframe={selectedTimeframe}
         selectedWaveStatus={selectedWaveStatus}
-      >
-        <SettingsDialog
-          onTimeframeChange={handleTimeframeChange}
-          trigger={
-            <Button variant="outline" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-          }
-        />
-      </DashboardHeader>
+      />
 
       <LoadingDialog isOpen={isLoading} />
 

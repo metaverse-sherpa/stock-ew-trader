@@ -1,16 +1,6 @@
 // Timeframes must be lowercase
-export type Timeframe = "1h" | "4h" | "1d" | "all";
-export type WaveStatus =
-  | "Wave 1"
-  | "Wave 2"
-  | "Wave 3"
-  | "Wave 4"
-  | "Wave 5 Bullish"
-  | "Wave 5 Bearish"
-  | "Wave A"
-  | "Wave B"
-  | "Wave C"
-  | "Completed";
+export type Timeframe = '1h' | '4h' | '1d';
+export type WaveStatus = 'Wave 1' | 'Wave 2' | 'Wave 3' | 'Wave 4' | 'Wave 5 Bullish' | 'Wave A' | 'Wave B' | 'Wave C' | 'Completed';
 
 export interface Stock {
   symbol: string;

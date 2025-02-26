@@ -84,19 +84,21 @@ const DashboardHeader = ({
       </div>
 
       <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="theme-toggle"
-            checked={isDarkMode}
-            onCheckedChange={onThemeToggle}
-          />
-          <Label htmlFor="theme-toggle" className="flex items-center space-x-2">
-            {isDarkMode ? (
-              <Moon className="h-4 w-4" />
-            ) : (
-              <Sun className="h-4 w-4" />
-            )}
-          </Label>
+        <div className="theme-toggle">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="theme-toggle"
+              checked={isDarkMode}
+              onCheckedChange={onThemeToggle}
+            />
+            <Label htmlFor="theme-toggle" className="flex items-center space-x-2">
+              {isDarkMode ? (
+                <Moon className="h-4 w-4" />
+              ) : (
+                <Sun className="h-4 w-4" />
+              )}
+            </Label>
+          </div>
         </div>
       </div>
 

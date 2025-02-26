@@ -74,3 +74,29 @@
       @apply bg-background text-foreground;
     }
   }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Ensure no styles are hiding the icon */
+.settings-icon {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 4rem;
+  z-index: 1000;
+}
