@@ -1,9 +1,15 @@
-import express from 'express';
+import express from 'express';  
 import yahooFinance from 'yahoo-finance2';
 import { WavePatternService } from './src/lib/services/wavePatternService.ts';
 import { supabase } from './src/lib/supabase.ts';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
+const PORT = 5174;
+
 app.use(express.json());
 
 // API Endpoints
@@ -93,7 +99,6 @@ app.post('/api/analyzeWaves', async (req, res) => {
   }
 });
 
-const PORT = 5174;
 app.listen(PORT, () => {
-  console.log(`API server running on http://localhost:${PORT}`);
+  console.log(`Express server running on http://localhost:${PORT}`);
 }); 

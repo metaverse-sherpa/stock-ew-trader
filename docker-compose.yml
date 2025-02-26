@@ -1,8 +1,6 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  frontend:
+    build: .
     ports:
       - "5005:5005"
     volumes:
@@ -11,5 +9,16 @@ services:
     environment:
       - NODE_ENV=development
     command: npm run dev
-    stdin_open: true
-    tty: true
+
+  backend:
+    build: .
+    ports:
+      - "5174:5174"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SUPABASE_URL=https://fobbjcbpyvyxswrrngoh.supabase.co
+      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmJqY2JweXZ5eHN3cnJuZ29oIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MDQxODYyMiwiZXhwIjoyMDU1OTk0NjIyfQ.3HrHnqCBBqn_FTXvPPp5fg4cHslq0LGyprNGlQdlM68
+    command: npm run server

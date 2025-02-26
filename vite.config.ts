@@ -1,10 +1,15 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import { vitePluginExpress } from 'vite-plugin-express';
 
-const conditionalPlugins: [string, Record<string, any>][] = [];
+const conditionalPlugins = (plugins: any[]) => {
+  if (process.env.NODE_ENV === "development") {
+    return plugins;
+  }
+  return [];
+};
 
+console.log("Current __dirname:", __dirname); // Log the __dirname for debugging  
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,15 +17,7 @@ export default defineConfig({
   optimizeDeps: {
     entries: ["src/main.tsx"],
   },
-  plugins: [
-    react({
-      plugins: conditionalPlugins,
-    }),
-    vitePluginExpress({
-      entry: 'server.ts',
-      watchPaths: ['./api/**/*.ts'],
-    })
-  ],
+  plugins: [react()],
   resolve: {
     preserveSymlinks: true,
     alias: {
@@ -28,7 +25,6 @@ export default defineConfig({
     },
   },
   server: {
-    // @ts-ignore
     allowedHosts: true,
     port: 5005,
     host: true,
@@ -37,7 +33,11 @@ export default defineConfig({
       'ngrok-skip-browser-warning': 'any-value',
     },
     proxy: {
-      '/api': 'http://localhost:5174'
+      '/api': {
+        target: 'http://localhost:5174', // Proxy API requests to the Express server
+        changeOrigin: true,
+        secure: false,
+      }
     }
   }
 });

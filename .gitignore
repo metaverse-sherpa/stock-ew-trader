@@ -7,8 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
+node_modules/
+dist/
 dist-ssr
 *.local
 
@@ -31,3 +31,12 @@ core
 .env
 .env.local
 .env.*.local
+
+# Ignore build artifacts
+build/
+
+# Ignore IDE-specific files
+.idea/
+
+# Ignore Docker-related files
+docker-compose.override.yml

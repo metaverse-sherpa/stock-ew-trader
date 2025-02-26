@@ -1,4 +1,4 @@
-FROM node:20.11
+FROM node:20
 
 # Add this line to suppress funding messages
 ENV DISABLE_OPENCOLLECTIVE=true
@@ -10,18 +10,23 @@ RUN npm config set loglevel error
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install express yahoo-finance2 vite-plugin-express
-RUN npm install -D @types/express
+# Copy package.json and package-lock.json
+COPY package.json package-lock.json ./
 
-# Copy source
+# Install dependencies
+RUN npm install
+
+# Install tsx globally
+RUN npm install -g tsx
+
+# Copy the rest of the application code
 COPY . .
 
 # Set permissions
 RUN chmod -R 755 scripts/
 RUN chmod -R 755 node_modules/.bin/
 
-EXPOSE 5005
+# Expose ports for the frontend and backend
+EXPOSE 5005 5174
 
 CMD ["npm", "run", "dev"]

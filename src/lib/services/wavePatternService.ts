@@ -1,6 +1,6 @@
-import { supabase } from "../supabase";
-import type { Timeframe, WaveStatus, StockPrice } from "../types";
-import { generateUUID } from "../utils";
+import { supabase } from "../supabase.ts"; 
+import type { Timeframe, WaveStatus, StockPrice } from "../types.ts";
+import { generateUUID } from "../utils.ts";
 
 export class WavePatternService {
   static async generateAllPatterns(
