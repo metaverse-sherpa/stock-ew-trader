@@ -1,6 +1,7 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import { vitePluginExpress } from 'vite-plugin-express';
 
 const conditionalPlugins: [string, Record<string, any>][] = [];
 
@@ -15,6 +16,10 @@ export default defineConfig({
     react({
       plugins: conditionalPlugins,
     }),
+    vitePluginExpress({
+      entry: 'server.ts',
+      watchPaths: ['./api/**/*.ts'],
+    })
   ],
   resolve: {
     preserveSymlinks: true,
@@ -31,5 +36,8 @@ export default defineConfig({
       'X-Custom-Header': 'test-value',
       'ngrok-skip-browser-warning': 'any-value',
     },
+    proxy: {
+      '/api': 'http://localhost:5174'
+    }
   }
 });

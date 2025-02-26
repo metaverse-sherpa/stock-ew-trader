@@ -12,7 +12,8 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm install express yahoo-finance2 vite-plugin-express
+RUN npm install -D @types/express
 
 # Copy source
 COPY . .

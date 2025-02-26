@@ -1,9 +1,6 @@
 import React from 'react';
-import { useState, useRef, useEffect } from "react";
-import { useToast } from "./ui/use-toast.tsx";
-import yahooFinance from 'yahoo-finance2';
-import { Dialog as CustomDialog } from './Dialog.tsx';
-import { BubbleNotification } from './BubbleNotification.tsx';
+import { useState, useEffect } from "react";
+import { useToast } from "./ui/use-toast.tsx"
 import {
   Dialog,
   DialogContent,
@@ -22,21 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select.tsx";
-import { Settings, RefreshCw, Plus } from "lucide-react";
-import { WavePatternService } from "@/lib/services/wavePatternService";
-import { supabase } from "@/lib/supabase";
-import type { Timeframe } from "../../lib/types";
+import { RefreshCw } from "lucide-react";
+import { WavePatternService } from "../lib/services/wavePatternService.ts";
+import { supabase } from "../lib/supabase.ts";
+import type { Timeframe } from "../lib/types.ts";
 import { Progress } from "./ui/progress.tsx";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../../components/ui/alert-dialog.tsx";
-import { Input } from "./ui/input.tsx";
+
 import { AddStockSymbol } from "./AddStockSymbol.tsx";
 
 interface SettingsDialogProps {
@@ -49,7 +37,6 @@ export const SettingsDialog = ({
   trigger,
 }: SettingsDialogProps = {}) => {
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
   const [analysisState, setAnalysisState] = useState<{
     isAnalyzing: boolean;
     progress: {
@@ -65,8 +52,6 @@ export const SettingsDialog = ({
   });
   const [autoAnalysis, setAutoAnalysis] = useState(false);
   const [defaultTimeframe, setDefaultTimeframe] = useState<Timeframe>("1d");
-  const [newSymbol, setNewSymbol] = useState("");
-  const [isAddingSymbol, setIsAddingSymbol] = useState(false);
 
   // Define showToast helper function
   const showToast = (title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
@@ -103,24 +88,17 @@ export const SettingsDialog = ({
     try {
       setAnalysisState({ isAnalyzing: true, progress: null });
 
-      await WavePatternService.generateAllPatterns((message, progress, patternsFound = 0) => {
-        if (progress) {
-          setAnalysisState(prev => ({
-            ...prev,
-            progress: {
-              message,
-              ...progress,
-            },
-          }));
-        } else {
-          setAnalysisState(prev => ({
-            ...prev,
-            progress: {
-              ...prev.progress,
-              message,
-            },
-          }));
-        }
+      await WavePatternService.generateAllPatterns((message, progress) => {
+        setAnalysisState(prev => ({
+          ...prev,
+          progress: {
+            message,
+            symbol: progress?.symbol || '',
+            timeframe: progress?.timeframe || '',
+            completed: progress?.completed || 0,
+            total: progress?.total || 0,
+          },
+        }));
       });
 
       const endTime = Date.now();
@@ -145,24 +123,24 @@ export const SettingsDialog = ({
 
   const handleAddSymbol = async (symbol: string) => {
     try {
-      const uppercaseSymbol = symbol.toUpperCase();
-      console.log(`Attempting to add symbol: ${uppercaseSymbol}`);
+      const response = await fetch('/api/validateStock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol })
+      });
+
+      if (!response.ok) throw new Error('API Error');
       
+      const stockData = await response.json();
       const { error } = await supabase
         .from('stocks')
-        .insert([{ symbol: uppercaseSymbol, needs_update: true }]);
+        .insert([{ ...stockData, needs_update: true }]);
 
-      if (error) {
-        console.error(`Error adding symbol ${uppercaseSymbol}:`, error);
-        throw error;
-      }
-
-      console.log(`Successfully added symbol: ${uppercaseSymbol}`);
-      showToast("Success", `Symbol "${uppercaseSymbol}" added successfully!`);
-
+      if (error) throw error;
+      showToast("Success", `Symbol "${symbol}" added!`);
     } catch (err) {
-      console.error(`Unexpected error adding symbol ${symbol}:`, err);
-      throw err;
+      console.error('Error:', err);
+      showToast("Error", "Failed to add symbol", "destructive");
     }
   };
 

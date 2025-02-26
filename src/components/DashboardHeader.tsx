@@ -1,9 +1,8 @@
 import React from "react";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import { Switch } from "./ui/switch";
-import { Label } from "./ui/label";
+import { Input } from "./ui/input.tsx";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs.tsx";
+import { Switch } from "./ui/switch.tsx";
+import { Label } from "./ui/label.tsx";
 import { Search, Moon, Sun } from "lucide-react";
 import {
   Select,
@@ -11,9 +10,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "./ui/select.tsx";
 
-import type { Timeframe, WaveStatus } from "@/lib/types";
+import type { Timeframe, WaveStatus } from "../../lib/types";
 
 interface DashboardHeaderProps {
   children?: React.ReactNode;
@@ -61,7 +60,7 @@ const DashboardHeader = ({
           <Input
             placeholder="Search stocks..."
             className="pl-10"
-            onChange={(e) => onSearch(e.target.value)}
+            onChange={(e) => onSearch((e.target as HTMLInputElement).value)}
           />
         </div>
 
