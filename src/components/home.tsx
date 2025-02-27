@@ -130,9 +130,11 @@ const Home = () => {
       <main className="p-6">
         <ErrorBoundary>
           <StockGrid
-            searchQuery={searchQuery}
-            timeframe={selectedTimeframe}
-            waveStatus={selectedWaveStatus}
+            stocks={stocks.map(symbol => ({
+              symbol,
+              name: symbol, // You might want to fetch the actual name from Supabase
+              price: 0 // You'll need to fetch the actual price
+            }))}
             onStockSelect={handleStockSelect}
           />
         </ErrorBoundary>

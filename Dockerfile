@@ -15,6 +15,7 @@ COPY package.json package-lock.json ./
 
 # Install dependencies
 RUN npm install
+RUN npm install cors
 
 # Install tsx globally
 RUN npm install -g tsx

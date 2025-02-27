@@ -195,3 +195,24 @@ curl -X POST http://localhost:5174/api/analyzeWaves \
    ```
 
 3. The API will be available at `http://localhost:5174`
+
+# Stock Analysis App
+
+A web application for analyzing stock market trends using Elliott Wave Theory.
+
+## Features
+- Real-time stock data visualization
+- Elliott Wave pattern recognition
+- Customizable timeframes
+- Detailed stock analysis views
+
+## Technologies
+- React
+- TypeScript
+- Supabase
+- Tailwind CSS
+
+## Getting Started
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`

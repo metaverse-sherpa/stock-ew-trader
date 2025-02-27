@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import routes from './routes/index.ts';
 import cors from 'cors';
+import waveRoutes from './routes/waveRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,7 @@ app.use(cors());
 
 // Routes
 app.use('/api', routes);
+app.use('/api/waves', waveRoutes);
 
 app.use((req, res, next) => {
   console.log(`Request received: ${req.method} ${req.url}`);
