@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from 'react';
 import { Input } from "./ui/input.tsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs.tsx";
 import { Switch } from "./ui/switch.tsx";
@@ -11,8 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select.tsx";
+import { useStockData } from '../hooks/useStockData';
 
-import type { Timeframe, WaveStatus } from "../../lib/types";
+import type { Timeframe, WaveStatus } from "../lib/types";  
 
 interface DashboardHeaderProps {
   children?: React.ReactNode;
@@ -25,7 +26,7 @@ interface DashboardHeaderProps {
   selectedWaveStatus?: WaveStatus | "all";
 }
 
-const DashboardHeader = ({
+export function DashboardHeader({
   onSearch = () => {},
   onTimeframeChange = () => {},
   onWaveStatusChange = () => {},
@@ -34,7 +35,10 @@ const DashboardHeader = ({
   selectedTimeframe = "1h",
   selectedWaveStatus = "Wave 5 Bullish",
   children,
-}: DashboardHeaderProps) => {
+}: DashboardHeaderProps) {
+  const [timeframe, setTimeframe] = useState('1d');
+  const [status, setStatus] = useState('Wave 5 Bullish');
+
   return (
     <div className="w-full h-[72px] px-6 bg-background border-b border-border flex items-center justify-between">
       <div className="flex items-center space-x-6 flex-1">
@@ -104,6 +108,4 @@ const DashboardHeader = ({
       <div className="flex items-center space-x-4">{children}</div>
     </div>
   );
-};
-
-export default DashboardHeader;
+}

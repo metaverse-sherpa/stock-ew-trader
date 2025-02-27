@@ -2,8 +2,8 @@ import { supabase } from "../supabase.server.js";
 import type { Timeframe, WaveStatus, StockPrice } from "../types.ts";
 import { generateUUID } from "../utils.ts";
 
-export class WavePatternService {
-  static async generateAllPatterns(
+const wavePatternService = {
+  generateAllPatterns: async (
     onProgress?: (
       message: string, 
       progress?: {
@@ -14,7 +14,7 @@ export class WavePatternService {
       }
     ) => void,
     symbols?: string[]
-  ) {
+  ) => {
     console.log("Starting pattern generation...");
     try {
       onProgress?.("Fetching stocks...");
@@ -102,7 +102,35 @@ export class WavePatternService {
 
           // Find wave patterns
           console.log(`Finding Elliott Wave patterns for ${stock.symbol}...`);
-          const patterns = this.findElliottWavePatterns(pivots, prices);
+          const patterns: Array<{
+            wave1_start: number;
+            wave1_start_time: string;
+            wave1_end: number | null;
+            wave1_end_time: string | null;
+            wave2_end: number | null;
+            wave2_end_time: string | null;
+            wave3_end: number | null;
+            wave3_end_time: string | null;
+            wave4_end: number | null;
+            wave4_end_time: string | null;
+            wave5_start: number | null;
+            wave5_end: number | null;
+            wave5_end_time: string | null;
+            status: WaveStatus;
+            confidence: number;
+            target_price1: number;
+            target_price2: number;
+            target_price3: number;
+            wave_a_start: number;
+            wave_a_end: number;
+            wave_a_end_time: string;
+            wave_b_start: number;
+            wave_b_end: number;
+            wave_b_end_time: string;
+            wave_c_start: number;
+            wave_c_end: number;
+            wave_c_end_time: string;
+          }> = this.findElliottWavePatterns(pivots, prices);
           console.log(`Found ${patterns.length} potential patterns`);
 
           // Store each pattern
@@ -164,9 +192,9 @@ export class WavePatternService {
       console.error("Error generating patterns:", error);
       throw error;
     }
-  }
+  },
 
-  private static findPivotPoints(prices: StockPrice[]) {
+  findPivotPoints: function(prices: StockPrice[]) {
     const pivots: Array<{ price: number; timestamp: string; isHigh: boolean }> =
       [];
     const lookback = 5; // Increased lookback for more significant pivots
@@ -212,9 +240,9 @@ export class WavePatternService {
     }
 
     return pivots;
-  }
+  },
 
-  private static isValidWave5Pattern(
+  isValidWave5Pattern: function(
     pattern: any,
     currentPrice: number,
     prices: StockPrice[],
@@ -359,13 +387,41 @@ export class WavePatternService {
     if (wave5Move > wave1Size * 2.618) return false;
 
     return true;
-  }
+  },
 
-  private static findElliottWavePatterns(
+  findElliottWavePatterns: function(
     pivots: Array<{ price: number; timestamp: string; isHigh: boolean }>,
     prices: StockPrice[],
   ) {
-    const patterns = [];
+    const patterns: Array<{
+      wave1_start: number;
+      wave1_start_time: string;
+      wave1_end: number | null;
+      wave1_end_time: string | null;
+      wave2_end: number | null;
+      wave2_end_time: string | null;
+      wave3_end: number | null;
+      wave3_end_time: string | null;
+      wave4_end: number | null;
+      wave4_end_time: string | null;
+      wave5_start: number | null;
+      wave5_end: number | null;
+      wave5_end_time: string | null;
+      status: WaveStatus;
+      confidence: number;
+      target_price1: number;
+      target_price2: number;
+      target_price3: number;
+      wave_a_start: number;
+      wave_a_end: number;
+      wave_a_end_time: string;
+      wave_b_start: number;
+      wave_b_end: number;
+      wave_b_end_time: string;
+      wave_c_start: number;
+      wave_c_end: number;
+      wave_c_end_time: string;
+    }> = [];
     if (!prices?.length) return patterns;
 
     const MAX_PATTERNS = 10;
@@ -392,19 +448,31 @@ export class WavePatternService {
         let pattern = {
           wave1_start: pivots[i].price,
           wave1_start_time: pivots[i].timestamp,
-          wave1_end: null,
-          wave1_end_time: null,
-          wave2_end: null,
-          wave2_end_time: null,
-          wave3_end: null,
-          wave3_end_time: null,
-          wave4_end: null,
-          wave4_end_time: null,
-          wave5_start: null,
-          wave5_end: null,
-          wave5_end_time: null,
+          wave1_end: null as number | null,
+          wave1_end_time: null as string | null,
+          wave2_end: null as number | null,
+          wave2_end_time: null as string | null,
+          wave3_end: null as number | null,
+          wave3_end_time: null as string | null,
+          wave4_end: null as number | null,
+          wave4_end_time: null as string | null,
+          wave5_start: null as number | null,
+          wave5_end: null as number | null,
+          wave5_end_time: null as string | null,
           status: "Wave 1" as WaveStatus,
           confidence: 0,
+          target_price1: 0,
+          target_price2: 0,
+          target_price3: 0,
+          wave_a_start: 0,
+          wave_a_end: 0,
+          wave_a_end_time: '',
+          wave_b_start: 0,
+          wave_b_end: 0,
+          wave_b_end_time: '',
+          wave_c_start: 0,
+          wave_c_end: 0,
+          wave_c_end_time: '',
         };
 
         // Look for Wave 1 end (next significant high)
@@ -517,4 +585,12 @@ export class WavePatternService {
 
     return patterns;
   }
-}
+};
+
+export default wavePatternService;
+
+export const generateAllPatterns = async (sendProgress: (message: string, progressData?: any) => void) => {
+  // Your implementation here
+};
+
+export const WavePatternService = wavePatternService;

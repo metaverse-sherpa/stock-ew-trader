@@ -1,5 +1,5 @@
 import express from 'express';
-import { WavePatternService } from '../lib/services/wavePatternService.js'; // Add .ts extension
+import { generateAllPatterns } from '../lib/services/wavePatternService.ts';
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ router.post('/analyzeWaves', async (req: express.Request, res: express.Response)
       })}\n\n`);
     };
 
-    await WavePatternService.generateAllPatterns(sendProgress);
+    await generateAllPatterns(sendProgress);
 
     const endTime = Date.now();
     const timeElapsed = ((endTime - startTime) / 1000).toFixed(1);
@@ -52,14 +52,11 @@ router.post('/analyzeWaves', async (req: express.Request, res: express.Response)
       completed: progress.total,
       total: progress.total
     })}\n\n`);
-    res.end();
+
   } catch (error) {
-    console.error('Analysis Error:', error);
-    res.status(500).json({ 
-      message: 'Failed to complete wave analysis',
-      error: (error as Error).message 
-    });
+    console.error('Error in analyzeWaves endpoint:', error);
+    res.status(500).send('An error occurred while analyzing waves.');
   }
 });
 
-export default router; 
+export default router;

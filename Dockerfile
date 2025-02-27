@@ -1,6 +1,6 @@
 FROM node:20
 
-# Add this line to suppress funding messages
+# Suppress unnecessary messages
 ENV DISABLE_OPENCOLLECTIVE=true
 ENV ADBLOCK=true
 
@@ -18,6 +18,12 @@ RUN npm install
 
 # Install tsx globally
 RUN npm install -g tsx
+
+# Compile TypeScript files
+#RUN npx tsc
+
+# Install specific dependencies (e.g., @tanstack/react-query)
+RUN npm install @tanstack/react-query @tanstack/react-query-devtools @types/express
 
 # Copy the rest of the application code
 COPY . .

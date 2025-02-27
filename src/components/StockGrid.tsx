@@ -4,145 +4,80 @@ import StockCard from "./StockCard";
 import { useStocks } from "@/lib/hooks/useStocks";
 import type { Timeframe, WaveStatus } from "@/lib/types";
 import Spinner from './Spinner';
+import { useStockData } from '../hooks/useStockData';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface StockGridProps {
   searchQuery?: string;
-  timeframe?: Timeframe;
-  waveStatus?: WaveStatus | "all";
-  onStockSelect?: (
-    symbol: string, 
-    navigationList?: Array<{
-      symbol: string;
-      timeframe: string;
-      waveStatus: string;
-    }>,
-    selectedTimeframe?: string,
-    selectedWaveStatus?: string
-  ) => void;
+  timeframe?: string;
+  waveStatus?: string;
 }
 
 const StockGrid = ({
-  onStockSelect,
   searchQuery = "",
-  timeframe = "1h",
+  timeframe = "1d",
   waveStatus = "Wave 5 Bullish",
 }: StockGridProps) => {
-  const { stocks, loading, error } = useStocks(timeframe, waveStatus);
+  const { data, loading, error, fetchData } = useStockData();
 
   useEffect(() => {
-    console.log('Stocks state:', stocks);
-  }, [stocks]);
+    fetchData(timeframe, waveStatus);
+  }, [timeframe, waveStatus]);
 
-  useEffect(() => {
-    if (error) {
-      console.log('Error state:', error);
-    }
-  }, [error]);
-
-  const filteredStocks = React.useMemo(() => {
-    if (!searchQuery) return stocks;
-    return stocks.filter((stock) =>
-      stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      stock.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [stocks, searchQuery]);
-
-  // Show loading spinner when loading is true
-  if (loading) {
-    return <Spinner />;
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 text-red-500">
-        <h2 className="text-xl font-bold">Error Loading Stocks</h2>
-        <p>{error.message}</p>
-        <pre className="mt-2 text-sm bg-gray-100 p-2 rounded">
-          {JSON.stringify(
-            {
-              message: error.message,
-              stack: error.stack,
-            },
-            null,
-            2,
-          )}
-        </pre>
-      </div>
-    );
-  }
-
-  if (!loading && filteredStocks.length === 0) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-muted-foreground">No stocks found matching your search criteria</p>
-      </Card>
-    );
-  }
-
-  console.log('StockGrid rendering:', { stocks, loading, error });
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {filteredStocks
-        .filter((stock, index, self) => {
-          if (timeframe === 'all' || waveStatus === 'all') return true;
-          return index === self.findIndex((s) => 
-            s.symbol === stock.symbol && 
-            s.wavePattern?.timeframe === stock.wavePattern?.timeframe &&
-            s.wavePattern?.status === stock.wavePattern?.status
-          );
-        })
-        .map((stock) => {
-          const thisStockWavePattern = stock.wavePattern;
-          
-          // Create navigation list with timeframe and wave status
-          const navigationList = filteredStocks
-            .filter(Boolean)
-            .map(s => ({
-              symbol: s.symbol,
-              timeframe: s.wavePattern?.timeframe || "1h",
-              waveStatus: s.wavePattern?.status || ""
-            }));
-
-          console.log('Rendering card:', {
-            symbol: stock.symbol,
-            timeframe: thisStockWavePattern?.timeframe,
-            waveStatus: thisStockWavePattern?.status,
-            prices: stock.prices
-          });
-
-          return (
-            <StockCard
-              key={`${stock.symbol}-${thisStockWavePattern?.timeframe}-${thisStockWavePattern?.status}`}
-              symbol={stock.symbol}
-              price={thisStockWavePattern?.current_price || 0}
-              change={
-                (((thisStockWavePattern?.current_price || 0) -
-                  (thisStockWavePattern?.wave1_start || 0)) /
-                  (thisStockWavePattern?.wave1_start || 1)) *
-                100
-              }
-              confidence={thisStockWavePattern?.confidence || 0}
-              waveStatus={thisStockWavePattern?.status || ""}
-              onClick={() => {
-                console.log('StockGrid onClick:', {
-                  symbol: stock.symbol,
-                  timeframe: thisStockWavePattern?.timeframe,
-                  waveStatus: thisStockWavePattern?.status
-                });
-                onStockSelect?.(
-                  stock.symbol,
-                  navigationList,
-                  thisStockWavePattern?.timeframe,
-                  thisStockWavePattern?.status
-                );
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {data.map((stock) => (
+        <div key={stock.symbol} className="p-4 border rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold">{stock.name} ({stock.symbol})</h3>
+          <p>{stock.exchange} | {stock.sector} | {stock.industry}</p>
+          <p>Timeframe: {stock.timeframe} | Status: {stock.status}</p>
+          <div className="h-32">
+            <Line
+              data={{
+                labels: stock.historicalData.map((d) => d.date),
+                datasets: [
+                  {
+                    label: 'Price',
+                    data: stock.historicalData.map((d) => d.price),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                  },
+                ],
               }}
-              prices={stock.prices || []}
-              timeframe={thisStockWavePattern?.timeframe || "1h"}
-              wavePattern={thisStockWavePattern}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                },
+              }}
             />
-          );
-        })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
