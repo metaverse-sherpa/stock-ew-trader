@@ -195,4 +195,38 @@ router.get('/', async (req: express.Request, res: express.Response) => {
   }
 });
 
+// New route for stock price details
+router.get('/:symbol/price-details', async (req, res) => {
+  const { symbol } = req.params;
+
+  if (!symbol || typeof symbol !== 'string') {
+    return res.status(400).json({ error: 'Invalid stock symbol' });
+  }
+
+  try {
+    const quote = await yahooFinance.quote(symbol);
+
+    if (!quote) {
+      return res.status(404).json({ error: 'Stock not found' });
+    }
+
+    const currentPrice = quote.regularMarketPrice;
+    const openPrice = quote.regularMarketOpen;
+    const priceChange = currentPrice - openPrice;
+    const percentChange = (priceChange / openPrice) * 100;
+
+    res.json({
+      symbol,
+      longName: quote.longName,
+      currentPrice,
+      openPrice,
+      priceChange,
+      percentChange
+    });
+  } catch (error) {
+    console.error('Error fetching stock price details:', error);
+    res.status(500).json({ error: 'Failed to fetch stock price details' });
+  }
+});
+
 export default router; 

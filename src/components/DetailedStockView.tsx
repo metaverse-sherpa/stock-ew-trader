@@ -20,7 +20,11 @@ interface DetailedStockViewProps {
 }
 
 const DetailedStockView: React.FC<DetailedStockViewProps> = ({ stock, onClose }) => {
-  const { stockDetail, loading, error } = useStockDetail(stock.symbol, stock.timeframe, stock.waveStatus);
+  const { stockDetail, loading, error } = useStockDetail(
+    stock.symbol,
+    stock.timeframe,
+    stock.waveStatus
+  );
 
   console.log('DetailedStockView rendered:', {
     symbol: stock.symbol,

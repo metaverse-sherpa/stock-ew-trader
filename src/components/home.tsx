@@ -6,33 +6,46 @@ import StockGrid from "./StockGrid";
 import { LoadingDialog } from "./LoadingDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "./ui/button";
-import { Settings } from "lucide-react";
+import { Settings, RefreshCw } from "lucide-react";
 import { supabase } from "../lib/supabase.client";
 import type { Timeframe, WaveStatus } from "../lib/types";
 import ErrorBoundary from './ErrorBoundary';
 import { useStockData } from "../hooks/useStockData";
+import { useQuery } from '@tanstack/react-query';
 
+// Update WaveStatus type
+type ExtendedWaveStatus = WaveStatus | "Wave 5 Bullish" | "all";
+
+// Add interface for Stock
+interface Stock {
+  symbol: string;
+  name: string;
+  price: number;
+  historicalData?: Array<{ timestamp: string; close: number }>;
+}
+
+interface NavigationItem {
+  symbol: string;
+  timeframe: Timeframe;
+  waveStatus: ExtendedWaveStatus;
+}
 
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
-  const [selectedWaveStatus, setSelectedWaveStatus] = useState<
-    WaveStatus | "all"
-  >("Wave 5 Bullish");
+  const [selectedWaveStatus, setSelectedWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const [stocks, setStocks] = useState<string[]>([]);
   const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1d");
-  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<WaveStatus | "all">("Wave 5 Bullish");
-  const [navigationList, setNavigationList] = useState<Array<{
-    symbol: string;
-    timeframe: string;
-    waveStatus: string;
-  }>>([]);
+  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
+  const [navigationList, setNavigationList] = useState<NavigationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   
   // Load default timeframe on initial render
   useEffect(() => {
@@ -47,39 +60,78 @@ const Home = () => {
     loadDefaultTimeframe();
   }, []);
 
-  useEffect(() => {
-    const fetchStocks = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('stocks') // Replace 'stocks' with your actual table name
-          .select('*')
-          .order('symbol', { ascending: true });
+  // Update fetchStocks function
+  const fetchStocks = async (): Promise<Stock[]> => {
+    try {
+      const { data: stocks, error } = await supabase
+        .from('stocks')
+        .select('symbol, name')
+        .order('symbol', { ascending: true });
 
-        if (error) {
-          throw error;
-        }
+      if (error) throw error;
 
-        if (!data || data.length === 0) {
-          console.log('No stocks found');
-          setStocks([]);
-        } else {
-          console.log('Fetched stocks from Supabase:', data);
-          // Assuming your table has a 'symbol' column
-          setStocks(data.map(stock => stock.symbol));
-        }
-      } catch (err) {
-        console.error('Error fetching stocks from Supabase:', err);
-        setError(err.message);
-        // Fallback data
-        setStocks(['AAPL', 'MSFT', 'GOOGL']);
-      } finally {
-        setLoading(false);
+      if (!stocks || stocks.length === 0) {
+        console.log('No stocks found');
+        return [];
       }
-    };
 
-    fetchStocks();
-  }, []);
+      const stocksWithPrices = await Promise.all(
+        stocks.map(async (stock) => {
+          try {
+            // Fetch price details
+            const priceResponse = await fetch(
+              `http://localhost:5174/api/stocks/${stock.symbol}/price-details`
+            );
+            
+            if (!priceResponse.ok) {
+              throw new Error(`Failed to fetch price details for ${stock.symbol}`);
+            }
 
+            const priceDetails = await priceResponse.json();
+
+            // Fetch historical data based on selected timeframe
+            const { data: historicalData } = await supabase
+              .from('stock_prices')
+              .select('timestamp, open, high, low, close')
+              .eq('symbol', stock.symbol)
+              .eq('timeframe', selectedTimeframe)
+              .order('timestamp', { ascending: true })
+              .limit(30);
+
+            return {
+              symbol: stock.symbol,
+              name: stock.name || stock.symbol,
+              currentPrice: priceDetails.currentPrice,
+              openPrice: priceDetails.openPrice,
+              priceChange: priceDetails.priceChange,
+              percentChange: priceDetails.percentChange,
+              historicalData: historicalData || [],
+              timeframe: selectedTimeframe,
+              waveStatus: selectedWaveStatus
+            };
+          } catch (error) {
+            console.error(`Error fetching data for ${stock.symbol}:`, error);
+            return {
+              symbol: stock.symbol,
+              name: stock.name || stock.symbol,
+              currentPrice: 0,
+              openPrice: 0,
+              priceChange: 0,
+              percentChange: 0,
+              historicalData: [],
+              timeframe: selectedTimeframe,
+              waveStatus: selectedWaveStatus
+            };
+          }
+        })
+      );
+
+      return stocksWithPrices;
+    } catch (err) {
+      console.error('Error fetching stocks:', err);
+      throw err;
+    }
+  };
 
   const handleTimeframeChange = (tf: Timeframe) => {
     setSelectedTimeframe(tf);
@@ -87,9 +139,9 @@ const Home = () => {
 
   const handleStockSelect = (
     symbol: string,
-    navList: Array<{ symbol: string; timeframe: string; waveStatus: string }>,
-    clickedTimeframe?: string,
-    clickedWaveStatus?: string
+    navList: NavigationItem[],
+    clickedTimeframe?: Timeframe,
+    clickedWaveStatus?: ExtendedWaveStatus
   ) => {
     console.log('Stock selected:', {
       symbol,
@@ -99,30 +151,75 @@ const Home = () => {
     });
 
     setSelectedStock(symbol);
-    setNavigationList(navList);
+    setNavigationList(navList as NavigationItem[]);
     
-    // Always set the timeframe and wave status from the clicked card
     if (clickedTimeframe) {
-      setSelectedDetailTimeframe(clickedTimeframe as Timeframe);
+      setSelectedDetailTimeframe(clickedTimeframe);
     }
     if (clickedWaveStatus) {
-      setSelectedDetailWaveStatus(clickedWaveStatus as WaveStatus);
+      setSelectedDetailWaveStatus(clickedWaveStatus);
     }
   };
 
-  if (loading) return <div>Loading...</div>;  
-  if (error) return <div>Error: {error}</div>;
+  // Replace useEffect with useQuery
+  const { data: stocksData, isLoading: stocksLoading, error: stocksError, refetch } = useQuery({
+    queryKey: ['stocks'],
+    queryFn: fetchStocks,
+    staleTime: 1000 * 60 * 5 // 5 minutes
+  });
+
+  const handleRefresh = async () => {
+    await refetch();
+  };
+
+  const filteredStocks = React.useMemo(() => {
+    if (!stocksData) return [];
+    return stocksData.filter(stock => 
+      stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      stock.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [stocksData, searchQuery]);
+
+  const paginatedStocks = filteredStocks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    refetch();
+  }, [selectedTimeframe, selectedWaveStatus]);
+
+  if (stocksLoading) {
+    return <LoadingDialog isOpen={true} />;
+  }
+  if (stocksError) return <div className="p-6 text-red-500">Error: {stocksError.message}</div>;
+
+  if (isLoading) return <LoadingDialog isOpen={true} />;
+  if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load stocks';
+    return (
+      <div className="p-6 text-red-500">
+        Error: {errorMessage}
+        <Button onClick={handleRefresh} className="ml-4">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh Prices
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
         onSearch={setSearchQuery}
         onTimeframeChange={handleTimeframeChange}
-        onWaveStatusChange={setSelectedWaveStatus}
+        onWaveStatusChange={(status: WaveStatus | "all") => 
+          setSelectedWaveStatus(status as ExtendedWaveStatus)
+        }
         onThemeToggle={() => setIsDarkMode(!isDarkMode)}
         isDarkMode={isDarkMode}
         selectedTimeframe={selectedTimeframe}
-        selectedWaveStatus={selectedWaveStatus}
+        selectedWaveStatus={selectedWaveStatus as WaveStatus | "all"}
       />
 
       <LoadingDialog isOpen={isLoading} />
@@ -130,76 +227,22 @@ const Home = () => {
       <main className="p-6">
         <ErrorBoundary>
           <StockGrid
-            stocks={stocks.map(symbol => ({
-              symbol,
-              name: symbol, // You might want to fetch the actual name from Supabase
-              price: 0 // You'll need to fetch the actual price
-            }))}
-            onStockSelect={handleStockSelect}
+            stocks={paginatedStocks}
+            onStockSelect={(symbol) => handleStockSelect(symbol, navigationList)}
           />
         </ErrorBoundary>
       </main>
 
       {selectedStock && (
         <DetailedStockView
-          isOpen={!!selectedStock}
-          onClose={() => setSelectedStock(null)}
-          symbol={selectedStock}
-          timeframe={selectedDetailTimeframe}
-          waveStatus={selectedDetailWaveStatus}
-          onTimeframeChange={setSelectedDetailTimeframe}
-          onWaveStatusChange={setSelectedDetailWaveStatus}
-          onNavigate={(symbol) => {
-            const currentIndex = navigationList.findIndex(
-              item => 
-                item.symbol === selectedStock && 
-                item.timeframe === selectedDetailTimeframe &&
-                item.waveStatus === selectedDetailWaveStatus
-            );
-            
-            const nextItem = navigationList[currentIndex + 1];
-            const prevItem = navigationList[currentIndex - 1];
-            
-            if (symbol === prevItem?.symbol) {
-              setSelectedDetailTimeframe(prevItem.timeframe as Timeframe);
-              setSelectedDetailWaveStatus(prevItem.waveStatus as WaveStatus);
-            } else if (symbol === nextItem?.symbol) {
-              setSelectedDetailTimeframe(nextItem.timeframe as Timeframe);
-              setSelectedDetailWaveStatus(nextItem.waveStatus as WaveStatus);
-            }
-            
-            setSelectedStock(symbol);
+          stock={{
+            symbol: selectedStock,
+            name: stocksData?.find(s => s.symbol === selectedStock)?.name || selectedStock,
+            price: stocksData?.find(s => s.symbol === selectedStock)?.price || 0,
+            waveStatus: selectedDetailWaveStatus,
+            timeframe: selectedDetailTimeframe
           }}
-          prevStock={
-            navigationList.findIndex(
-              item => 
-                item.symbol === selectedStock && 
-                item.timeframe === selectedDetailTimeframe &&
-                item.waveStatus === selectedDetailWaveStatus
-            ) > 0
-              ? navigationList[navigationList.findIndex(
-                  item => 
-                    item.symbol === selectedStock && 
-                    item.timeframe === selectedDetailTimeframe &&
-                    item.waveStatus === selectedDetailWaveStatus
-                ) - 1].symbol
-              : undefined
-          }
-          nextStock={
-            navigationList.findIndex(
-              item => 
-                item.symbol === selectedStock && 
-                item.timeframe === selectedDetailTimeframe &&
-                item.waveStatus === selectedDetailWaveStatus
-            ) < navigationList.length - 1
-              ? navigationList[navigationList.findIndex(
-                  item => 
-                    item.symbol === selectedStock && 
-                    item.timeframe === selectedDetailTimeframe &&
-                    item.waveStatus === selectedDetailWaveStatus
-                ) + 1].symbol
-              : undefined
-          }
+          onClose={() => setSelectedStock(null)}
         />
       )}
     </div>

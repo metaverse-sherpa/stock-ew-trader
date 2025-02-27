@@ -1,8 +1,13 @@
 export interface Stock {
   symbol: string;
   name: string;
-  price: number;
-  waveStatus: string;
+  currentPrice: number;
+  openPrice: number;
+  priceChange: number;
+  percentChange: number;
+  historicalData: Array<{ timestamp: string; open: number; high: number; low: number; close: number }>;
+  timeframe: Timeframe;
+  waveStatus: WaveStatus;
   // Add other fields as needed
 }
 

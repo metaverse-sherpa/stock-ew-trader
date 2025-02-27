@@ -17,4 +17,10 @@ try {
   throw new Error(`Invalid Supabase URL: ${supabaseUrl}`);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey); 
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': 'http://localhost:5005'
+    }
+  }
+}); 
