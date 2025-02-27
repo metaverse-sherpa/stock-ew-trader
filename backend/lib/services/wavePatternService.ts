@@ -1,4 +1,4 @@
-import { supabase } from "../supabase.ts"; 
+import { supabase } from "../supabase.server.js"; 
 import type { Timeframe, WaveStatus, StockPrice } from "../types.ts";
 import { generateUUID } from "../utils.ts";
 

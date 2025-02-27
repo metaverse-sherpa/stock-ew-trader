@@ -38,6 +38,9 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       }
+    },
+    hmr: {
+      clientPort: 5005, // Explicitly set the WebSocket port
     }
   }
 });
