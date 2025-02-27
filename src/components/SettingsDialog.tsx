@@ -20,9 +20,9 @@ import {
   SelectValue,
 } from "./ui/select.tsx";
 import { RefreshCw } from "lucide-react";
-import { WavePatternService } from "../lib/services/wavePatternService.ts";
-import { supabase } from "../lib/supabase.ts";
-import type { Timeframe } from "../lib/types.ts";
+import { WavePatternService } from '../../shared/lib/services/wavePatternService.ts';
+import { supabase } from "../lib/supabase.client";
+import type { Timeframe } from "../lib/types";
 import { Progress } from "./ui/progress.tsx";
 
 import { AddStockSymbol } from "./AddStockSymbol.tsx";

@@ -1,22 +1,28 @@
 import React from 'react';
-import type { Timeframe } from '@/lib/types';
+import { Line } from 'react-chartjs-2';
+import { Chart, registerables } from 'chart.js';
+import { StockPrice } from '../lib/types';
+
+Chart.register(...registerables);
 
 interface StockChartProps {
-  symbol: string;
-  timeframe: Timeframe;
-  showVolume?: boolean;
-  height?: string;
+  prices: StockPrice[];
 }
 
-const StockChart = ({ symbol, timeframe, showVolume = false, height = '400px' }: StockChartProps) => {
-  return (
-    <div style={{ height }}>
-      <h2 className="text-xl font-semibold mb-4">{symbol} Chart</h2>
-      {/* Add your charting library implementation here */}
-      <p>Chart for {timeframe} timeframe</p>
-      {showVolume && <p>Volume indicator</p>}
-    </div>
-  );
+const StockChart: React.FC<StockChartProps> = ({ prices }) => {
+  const data = {
+    labels: prices.map((p) => p.timestamp),
+    datasets: [
+      {
+        label: 'Price',
+        data: prices.map((p) => p.close),
+        borderColor: 'rgba(75, 192, 192, 1)',
+        fill: false,
+      },
+    ],
+  };
+
+  return <Line data={data} />;
 };
 
 export default StockChart; 

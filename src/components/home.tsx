@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useTheme } from "@/lib/hooks/useTheme";
-import DashboardHeader from "./DashboardHeader";
+import { useTheme } from "../lib/hooks/useTheme";
+import DashboardHeader from './DashboardHeader';
 import DetailedStockView from "./DetailedStockView";
 import StockGrid from "./StockGrid";
 import { LoadingDialog } from "./LoadingDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "./ui/button";
 import { Settings } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import type { Timeframe, WaveStatus } from "@/lib/types";
+import { supabase } from "../lib/supabase.client";
+import type { Timeframe, WaveStatus } from "../lib/types";
 
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();

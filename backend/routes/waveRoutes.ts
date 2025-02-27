@@ -1,10 +1,19 @@
 import express from 'express';
-import { generateAllPatterns } from '../lib/services/wavePatternService.ts';
+import wavePatternService from '../../shared/lib/services/wavePatternService.ts';
 
 const router = express.Router();
 
+// Test endpoint
+router.get('/test', (req: express.Request, res: express.Response) => {  
+  console.log('Test endpoint hit');
+  res.json({ message: 'Stock routes are working!' });
+});
+
+
 // Analyze waves endpoint
 router.post('/analyzeWaves', async (req: express.Request, res: express.Response) => {
+  const { symbols } = req.body;
+  console.log('AnalyzeWaves endpoint hit');
   try {
     const startTime = Date.now();
 
@@ -42,7 +51,25 @@ router.post('/analyzeWaves', async (req: express.Request, res: express.Response)
       })}\n\n`);
     };
 
-    await generateAllPatterns(sendProgress);
+    // Add error handling for the SSE connection
+    res.on('close', () => {
+      console.log('Client disconnected from SSE');
+      res.end();
+    });
+
+    // Add timeout handling
+    const timeout = setTimeout(() => {
+      res.write(`data: ${JSON.stringify({
+        message: 'Analysis timed out',
+        completed: 0,
+        total: 0
+      })}\n\n`);
+      res.end();
+    }, 300000); // 5 minute timeout
+
+    // Clear timeout on completion
+    await wavePatternService.generateAllPatterns(sendProgress, symbols)
+      .finally(() => clearTimeout(timeout));
 
     const endTime = Date.now();
     const timeElapsed = ((endTime - startTime) / 1000).toFixed(1);
@@ -55,7 +82,7 @@ router.post('/analyzeWaves', async (req: express.Request, res: express.Response)
 
   } catch (error) {
     console.error('Error in analyzeWaves endpoint:', error);
-    res.status(500).send('An error occurred while analyzing waves.');
+    res.status(500).send('Internal Server Error');
   }
 });
 

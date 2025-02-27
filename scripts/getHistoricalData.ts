@@ -1,5 +1,5 @@
 import yahooFinance from 'yahoo-finance2';
-import { supabase } from "../src/lib/supabase";
+import { supabase } from "../shared/lib/supabase.server.ts";
 
 export async function getHistoricalData(symbols: string[]) {
   const timeframes = [

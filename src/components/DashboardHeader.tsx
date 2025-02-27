@@ -26,7 +26,7 @@ interface DashboardHeaderProps {
   selectedWaveStatus?: WaveStatus | "all";
 }
 
-export function DashboardHeader({
+const DashboardHeader = ({
   onSearch = () => {},
   onTimeframeChange = () => {},
   onWaveStatusChange = () => {},
@@ -35,7 +35,7 @@ export function DashboardHeader({
   selectedTimeframe = "1h",
   selectedWaveStatus = "Wave 5 Bullish",
   children,
-}: DashboardHeaderProps) {
+}: DashboardHeaderProps) => {
   const [timeframe, setTimeframe] = useState('1d');
   const [status, setStatus] = useState('Wave 5 Bullish');
 
@@ -108,4 +108,6 @@ export function DashboardHeader({
       <div className="flex items-center space-x-4">{children}</div>
     </div>
   );
-}
+};
+
+export default DashboardHeader;

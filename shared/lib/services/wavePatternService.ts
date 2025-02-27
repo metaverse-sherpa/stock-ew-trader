@@ -1,10 +1,9 @@
-import { supabase } from "../supabase.server.js"; 
+import { supabase } from "../supabase.server.ts"; 
 import type { Timeframe, WaveStatus, StockPrice } from "../types.ts";
 import { generateUUID } from "../utils.ts";
-import { WavePatternService } from '../../../shared/lib/services/wavePatternService.ts';
 
-const wavePatternService = {
-  generateAllPatterns: async (
+class WavePatternService {
+  async generateAllPatterns(
     onProgress?: (
       message: string, 
       progress?: {
@@ -15,7 +14,7 @@ const wavePatternService = {
       }
     ) => void,
     symbols?: string[]
-  ) => {
+  ) {
     console.log("Starting pattern generation...");
     try {
       onProgress?.("Fetching stocks...");
@@ -193,9 +192,9 @@ const wavePatternService = {
       console.error("Error generating patterns:", error);
       throw error;
     }
-  },
+  }
 
-  findPivotPoints: function(prices: StockPrice[]) {
+  findPivotPoints(prices: StockPrice[]) {
     const pivots: Array<{ price: number; timestamp: string; isHigh: boolean }> =
       [];
     const lookback = 5; // Increased lookback for more significant pivots
@@ -241,9 +240,9 @@ const wavePatternService = {
     }
 
     return pivots;
-  },
+  }
 
-  isValidWave5Pattern: function(
+  isValidWave5Pattern(
     pattern: any,
     currentPrice: number,
     prices: StockPrice[],
@@ -388,9 +387,9 @@ const wavePatternService = {
     if (wave5Move > wave1Size * 2.618) return false;
 
     return true;
-  },
+  }
 
-  findElliottWavePatterns: function(
+  findElliottWavePatterns(
     pivots: Array<{ price: number; timestamp: string; isHigh: boolean }>,
     prices: StockPrice[],
   ) {
@@ -586,12 +585,7 @@ const wavePatternService = {
 
     return patterns;
   }
-};
+}
 
-export default wavePatternService;
+export default new WavePatternService();
 
-export const generateAllPatterns = async (sendProgress: (message: string, progressData?: any) => void) => {
-  // Your implementation here
-};
-
-export const WavePatternService = wavePatternService;

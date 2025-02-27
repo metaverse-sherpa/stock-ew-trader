@@ -10,7 +10,8 @@
       "@components/*": ["components/*"],
       "@pages/*": ["pages/*"],
       "@lib/*": ["lib/*"],
-      "@hooks/*": ["hooks/*"]
+      "@hooks/*": ["hooks/*"],
+      "@shared/*": ["shared/lib/*"]
     },
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,

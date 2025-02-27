@@ -1,19 +1,20 @@
 import express from 'express';
 import yahooFinance from 'yahoo-finance2';
-import { supabase } from '../lib/supabase.server.ts'; // Add .ts extension
+import { supabase } from '../../shared/lib/supabase.server.ts'; // Add .ts extension
 import { subDays, formatISO } from 'date-fns';
-import { WavePatternService } from '../lib/services/wavePatternService.ts';
+import wavePatternService from '../../shared/lib/services/wavePatternService.ts';
 
 const router = express.Router();
 
 // Test endpoint
 router.get('/test', (req: express.Request, res: express.Response) => {  
-  console.log('Test endpoint hit'); // Log entry point
+  console.log('Test endpoint hit');
   res.json({ message: 'Stock routes are working!' });
 });
 
 // Validate stock endpoint
-router.post('/validateStock', async (req: express.Request, res: express.Response) => {  
+router.post('/validateStock', async (req: express.Request, res: express.Response) => {
+  console.log('ValidateStock endpoint hit with symbol:', req.body.symbol);
   try {
     const { symbol } = req.body;
     if (!symbol) return res.status(400).json({ message: 'Symbol required' });
@@ -37,19 +38,18 @@ router.post('/validateStock', async (req: express.Request, res: express.Response
       exchange: quote.exchange || '',
     });
   } catch (error) {
+    console.error('Error in validateStock:', error);
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
 // Save stock endpoint
 router.post('/saveStock', async (req: express.Request, res: express.Response) => {
-  console.log('Entered /saveStock endpoint'); // Log entry point
-  console.log('Request body:', req.body); // Log request body
-
+  console.log('SaveStock endpoint hit with symbol:', req.body.symbol);
   try {
     const { symbol } = req.body;
     if (!symbol) {
-      console.error('Symbol is required'); // Log missing symbol
+      console.error('Symbol is required');
       return res.status(400).json({ message: 'Symbol required' });
     }
 
@@ -74,8 +74,7 @@ router.post('/saveStock', async (req: express.Request, res: express.Response) =>
       price: quote.regularMarketPrice || null,
       exchange: quote.exchange || '',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      needs_update: false
+      updated_at: new Date().toISOString()
     };
 
     console.log('Stock data to save:', stockData); // Log stock data
@@ -93,72 +92,11 @@ router.post('/saveStock', async (req: express.Request, res: express.Response) =>
     console.log('Stock saved successfully:', data); // Log success
     res.status(200).json({ message: 'Stock saved successfully', data });
   } catch (error) {
-    console.error('Error in /saveStock:', error); // Log general error
+    console.error('Error in saveStock:', error);
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-// Add this new endpoint
-router.post('/updateStockPrices', async (req: express.Request, res: express.Response) => {
-  try {
-    // Get all stocks from the database
-    const { data: stocks, error: stocksError } = await supabase
-      .from('stocks')
-      .select('symbol');
-
-    if (stocksError) throw stocksError;
-    if (!stocks || stocks.length === 0) {
-      return res.status(200).json({ message: 'No stocks found' });
-    }
-
-    const timeframes = [
-      { interval: '1d', period: 365 },  // 1 day data for last year
-      { interval: '1wk', period: 730 }, // 1 week data for last 2 years
-      { interval: '1mo', period: 1430 } // 1 month data for last ~4 years
-    ];
-
-    // Process each stock
-    for (const stock of stocks) {
-      try {
-        for (const timeframe of timeframes) {
-          console.log(`Fetching ${timeframe.interval} data for ${stock.symbol}`);
-          
-          const historicalData = await yahooFinance.historical(stock.symbol, {
-            period1: formatISO(subDays(new Date(), timeframe.period), { representation: 'date' }),
-            interval: timeframe.interval as '1d' | '1wk' | '1mo'
-          });
-
-          const priceData = historicalData.map(day => ({
-            symbol: stock.symbol,
-            timeframe: timeframe.interval,
-            timestamp: day.date,
-            open: day.open,
-            high: day.high,
-            low: day.low,
-            close: day.close,
-            volume: day.volume
-          }));
-
-          const { error: insertError } = await supabase
-            .from('stock_prices')
-            .upsert(priceData, { onConflict: 'symbol,timeframe,timestamp' });
-
-          if (insertError) throw insertError;
-        }
-
-        console.log(`Updated prices for ${stock.symbol}`);
-      } catch (error) {
-        console.error(`Error updating ${stock.symbol}:`, error);
-        // Continue with next stock even if one fails
-      }
-    }
-
-    res.status(200).json({ message: 'Stock prices updated successfully' });
-  } catch (error) {
-    console.error('Error in /updateStockPrices:', error);
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
 
 // Add this new endpoint
 router.post('/updateHistoricalData', async (req: express.Request, res: express.Response) => {
@@ -246,37 +184,5 @@ router.post('/updateHistoricalData', async (req: express.Request, res: express.R
   }
 });
 
-// Add this new endpoint
-router.post('/analyzeWaves', async (req: express.Request, res: express.Response) => {
-  try {
-    console.log('Starting wave pattern analysis...');
-    
-    // Optional: Allow specifying symbols in the request
-    const { symbols } = req.body;
-    
-    const onProgress = (message: string, progress?: {
-      symbol: string;
-      timeframe: string;
-      completed: number;
-      total: number;
-    }) => {
-      console.log(message);
-      // You could also implement WebSocket or SSE here for real-time updates
-    };
-
-    await WavePatternService.generateAllPatterns(onProgress, symbols);
-
-    res.status(200).json({ 
-      message: 'Wave analysis completed successfully',
-      status: 'success'
-    });
-  } catch (error) {
-    console.error('Error in /analyzeWaves:', error);
-    res.status(500).json({ 
-      error: (error as Error).message,
-      status: 'error'
-    });
-  }
-});
 
 export default router; 

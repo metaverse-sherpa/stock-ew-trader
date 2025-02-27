@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabase";
-import type { WavePattern, StockPrice, Timeframe, WaveStatus } from "../types";
+import { supabase } from "../supabase.js";
+import type { WavePattern, StockPrice, Timeframe, WaveStatus, Stock } from "../types.js";
 
 export function useStockDetail(
   symbol: string, 
@@ -11,7 +11,7 @@ export function useStockDetail(
   const [prices, setPrices] = useState<StockPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [stockDetail, setStockDetail] = useState<any>(null);
+  const [stockDetail, setStockDetail] = useState<Stock | null>(null);
 
   useEffect(() => {
     console.log('useStockDetail effect running for:', { symbol, timeframe, waveStatus });
