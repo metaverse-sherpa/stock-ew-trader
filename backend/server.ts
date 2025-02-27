@@ -1,6 +1,7 @@
 import express from 'express';  
 import dotenv from 'dotenv';
 import routes from './routes/index.ts';
+import cors from 'cors';
 
 // Load environment variables
 dotenv.config();
@@ -10,6 +11,7 @@ const PORT = 5174;
 
 // Middleware
 app.use(express.json());
+app.use(cors());
 
 // Routes
 app.use('/api', routes);

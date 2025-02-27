@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabase.js";
-import type { WavePattern, StockPrice, Timeframe, WaveStatus, Stock } from "../types.js";
+import { supabase } from "../supabase.client";
+import type { WavePattern, StockPrice, Timeframe, WaveStatus, Stock } from "../types";
 
 export function useStockDetail(
   symbol: string, 

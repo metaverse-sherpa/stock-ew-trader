@@ -9,6 +9,9 @@ import { Button } from "./ui/button";
 import { Settings } from "lucide-react";
 import { supabase } from "../lib/supabase.client";
 import type { Timeframe, WaveStatus } from "../lib/types";
+import ErrorBoundary from './ErrorBoundary';
+import { useStockData } from "../hooks/useStockData";
+
 
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
@@ -27,7 +30,10 @@ const Home = () => {
     timeframe: string;
     waveStatus: string;
   }>>([]);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  
   // Load default timeframe on initial render
   useEffect(() => {
     const loadDefaultTimeframe = async () => {
@@ -40,6 +46,40 @@ const Home = () => {
 
     loadDefaultTimeframe();
   }, []);
+
+  useEffect(() => {
+    const fetchStocks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('stocks') // Replace 'stocks' with your actual table name
+          .select('*')
+          .order('symbol', { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          console.log('No stocks found');
+          setStocks([]);
+        } else {
+          console.log('Fetched stocks from Supabase:', data);
+          // Assuming your table has a 'symbol' column
+          setStocks(data.map(stock => stock.symbol));
+        }
+      } catch (err) {
+        console.error('Error fetching stocks from Supabase:', err);
+        setError(err.message);
+        // Fallback data
+        setStocks(['AAPL', 'MSFT', 'GOOGL']);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStocks();
+  }, []);
+
 
   const handleTimeframeChange = (tf: Timeframe) => {
     setSelectedTimeframe(tf);
@@ -70,6 +110,9 @@ const Home = () => {
     }
   };
 
+  if (loading) return <div>Loading...</div>;  
+  if (error) return <div>Error: {error}</div>;
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
@@ -85,12 +128,14 @@ const Home = () => {
       <LoadingDialog isOpen={isLoading} />
 
       <main className="p-6">
-        <StockGrid
-          searchQuery={searchQuery}
-          timeframe={selectedTimeframe}
-          waveStatus={selectedWaveStatus}
-          onStockSelect={handleStockSelect}
-        />
+        <ErrorBoundary>
+          <StockGrid
+            searchQuery={searchQuery}
+            timeframe={selectedTimeframe}
+            waveStatus={selectedWaveStatus}
+            onStockSelect={handleStockSelect}
+          />
+        </ErrorBoundary>
       </main>
 
       {selectedStock && (

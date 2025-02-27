@@ -184,5 +184,15 @@ router.post('/updateHistoricalData', async (req: express.Request, res: express.R
   }
 });
 
+router.get('/', async (req: express.Request, res: express.Response) => {
+  try {
+    const { data, error } = await supabase.from('stocks').select('*');
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching stocks:', error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
 
 export default router; 

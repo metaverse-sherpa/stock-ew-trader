@@ -38,7 +38,7 @@ src/
 └── main.tsx
 
 
-4. Database Structure
+## 4. Database Structure
 -- Create the stocks table
 CREATE TABLE public.stocks (
     id bigint primary key generated always as identity,
@@ -105,3 +105,19 @@ ALTER TABLE public.wave_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
 
 -- Note: You will need to create RLS policies to control access to these tables.
+
+
+## 4. APIs
+
+  test() - curl http://localhost:5174/api/stocks/test
+  validateStock(symbol) - Checks to see if the symbol name is valid
+    curl -X POST http://localhost:5174/api/stocks/validateStock -H "Content-Type: application/json" -d '{"symbol": "AAPL"}'
+
+  saveStock - Saves the symbol and associated info to the stocks table
+    curl -X POST http://localhost:5174/api/stocks/saveStock -H "Content-Type: application/json" -d '{"symbol": "AAPL"}'
+
+    updateHistoricalData - This should run daily to get all historical Database
+        curl -X POST http://localhost:5174/api/stocks/updateHistoricalData
+
+    analyzeWaves - Looks at every stock in the stocks table and uses the historical data to find wave patterns
+        curl -X POST http://localhost:5174/api/waves/analyzeWaves 

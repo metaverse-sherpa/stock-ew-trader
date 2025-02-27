@@ -1,5 +1,5 @@
-import { supabase } from "../supabase";
-import type { Timeframe } from "../types";
+import { supabase } from "../supabase.client";
+import type { Timeframe } from "../types.js";
 
 const ALPHA_VANTAGE_API_KEY = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY;
 const BASE_URL = "https://www.alphavantage.co/query";

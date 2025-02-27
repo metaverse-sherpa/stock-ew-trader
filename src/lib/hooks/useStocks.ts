@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
-import { supabase } from "../supabase";
-import type { Stock, WavePattern, Timeframe, WaveStatus } from "../types";
+import { supabase } from "../supabase.client";
+import type { Stock, WavePattern, Timeframe, WaveStatus } from "../types.js";
 
 // Cache object to store data for each timeframe + waveStatus combination
 const dataCache: Record<string, any> = {};
 
 export function useStocks(
   selectedTimeframe: Timeframe,
-  waveStatus: WaveStatus | "all" = "Wave 5 Bullish",
+  waveStatus: WaveStatus | "all" = "Wave 5 Bullish",  
 ) {
   // Cache prices for mini charts
   const [priceCache, setPriceCache] = useState<Record<string, any[]>>({});
