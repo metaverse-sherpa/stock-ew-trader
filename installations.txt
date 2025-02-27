@@ -1,0 +1,107 @@
+# Stocks EW Frontend Installation Guide
+
+## Prerequisites
+- Node.js (v18 or higher)
+- npm (v9 or higher)
+- Git
+
+## 1. Create New Project
+```bash
+npm create vite@latest stocks-ew-app -- --template react-ts
+cd stocks-ew-app
+```
+
+## 2. Install Dependencies
+```bash
+# Core dependencies
+npm install
+
+# Additional required packages
+npm install react-router-dom @tanstack/react-query chart.js react-chartjs-2 @types/chart.js @types/react-chartjs-2 lucide-react
+
+# Development dependencies
+npm install -D typescript @types/react @types/react-dom eslint prettier eslint-plugin-react eslint-config-prettier
+```
+
+## 3. Project Structure 
+```
+src/
+├── components/
+│   ├── charts/          # Charting components
+│   ├── waves/           # Elliott Wave analysis components
+│   └── ui/              # Reusable UI components
+├── pages/               # Page-level components
+├── lib/                 # API and utility functions
+├── hooks/               # Custom React hooks
+├── styles/              # Global styles
+├── App.tsx
+└── main.tsx
+
+
+4. Database Structure
+-- Create the stocks table
+CREATE TABLE public.stocks (
+    id bigint primary key generated always as identity,
+    symbol text NOT NULL UNIQUE,
+    name text,
+    exchange text,
+    sector text,
+    industry text,
+    price numeric,
+    needs_update boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- Create an index on the symbol column for faster lookups
+CREATE INDEX idx_stocks_symbol ON public.stocks (symbol);
+
+-- Create the stock_prices table
+CREATE TABLE public.stock_prices (
+    id bigint primary key generated always as identity,
+    stock_id bigint NOT NULL,
+    price numeric NOT NULL,
+    price_date timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    FOREIGN KEY (stock_id) REFERENCES public.stocks (id) ON DELETE CASCADE
+);
+
+-- Create an index on the stock_id column for faster lookups
+CREATE INDEX idx_stock_prices_stock_id ON public.stock_prices (stock_id);
+
+-- Create the wave_settings table
+CREATE TABLE public.wave_settings (
+    id bigint primary key generated always as identity,
+    user_id bigint NOT NULL,
+    setting_name text NOT NULL,
+    setting_value text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
+);
+
+-- Create an index on the user_id column for faster lookups
+CREATE INDEX idx_wave_settings_user_id ON public.wave_settings (user_id);
+
+-- Create the user_settings table
+CREATE TABLE public.user_settings (
+    id bigint primary key generated always as identity,
+    user_id bigint NOT NULL,
+    setting_name text NOT NULL,
+    setting_value text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
+);
+
+-- Create an index on the user_id column for faster lookups
+CREATE INDEX idx_user_settings_user_id ON public.user_settings (user_id);
+
+-- Enable Row Level Security (RLS) for all tables
+ALTER TABLE public.stocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stock_prices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wave_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+-- Note: You will need to create RLS policies to control access to these tables.

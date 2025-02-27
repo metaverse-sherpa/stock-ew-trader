@@ -1,19 +1,20 @@
 import React from 'react';
 import { Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
-import Home from "./components/home.tsx";
-import { SettingsDialog } from './components/SettingsDialog.tsx';
-import { TestButton } from "./components/TestButton.tsx";
+import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
+import HomePage from "@pages/HomePage";
+import StockListPage from "@pages/StockListPage";
+import StockDetailPage from "@pages/StockDetailPage";
+import { SettingsDialog } from "@components/ui/SettingsDialog";
 import { Settings } from 'lucide-react';
 
 function App() {
   return (
-    <div>
+    <Router>
       <Suspense fallback={<p>Loading...</p>}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          {/* Add tempo routes before the catch-all */}
-          {import.meta.env.VITE_TEMPO === "true" && <Route path="/tempobook/*" />}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/stocks" element={<StockListPage />} />
+          <Route path="/stocks/:symbol" element={<StockDetailPage />} />
         </Routes>
         <SettingsDialog trigger={
           <button className="fixed top-3 right-3 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -21,7 +22,7 @@ function App() {
           </button>
         }/>
       </Suspense>
-    </div>
+    </Router>
   );
 }
 
