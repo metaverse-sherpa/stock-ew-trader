@@ -3,7 +3,7 @@ import { Input } from "./ui/input.tsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs.tsx";
 import { Switch } from "./ui/switch.tsx";
 import { Label } from "./ui/label.tsx";
-import { Search, Moon, Sun } from "lucide-react";
+import { Search, Moon, Sun, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select.tsx";
-import { useStockData } from '../hooks/useStockData';
 
 import type { Timeframe, WaveStatus } from "../lib/types";  
 
@@ -24,6 +23,7 @@ interface DashboardHeaderProps {
   isDarkMode?: boolean;
   selectedTimeframe?: Timeframe;
   selectedWaveStatus?: WaveStatus | "all";
+  isLoading?: boolean;
 }
 
 const DashboardHeader = ({
@@ -32,13 +32,11 @@ const DashboardHeader = ({
   onWaveStatusChange = () => {},
   onThemeToggle = () => {},
   isDarkMode = true,
-  selectedTimeframe = "1h",
-  selectedWaveStatus = "Wave 5 Bullish",
+  selectedTimeframe = "1d",
+  selectedWaveStatus = "Wave 5",
+  isLoading = false,
   children,
 }: DashboardHeaderProps) => {
-  const [timeframe, setTimeframe] = useState('1d');
-  const [status, setStatus] = useState('Wave 5 Bullish');
-
   return (
     <div className="w-full h-[72px] px-6 bg-background border-b border-border flex items-center justify-between">
       <div className="flex items-center space-x-6 flex-1">
@@ -52,7 +50,7 @@ const DashboardHeader = ({
             <SelectValue placeholder="Select wave status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Wave 5 Bullish">Wave 5 Bullish</SelectItem>
+            <SelectItem value="Wave 5">Wave 5</SelectItem>
             <SelectItem value="Wave A">Wave A</SelectItem>
             <SelectItem value="Wave B">Wave B</SelectItem>
             <SelectItem value="Wave C">Wave C</SelectItem>
@@ -69,11 +67,11 @@ const DashboardHeader = ({
         </div>
 
         <Tabs
-          defaultValue="1h"
+          defaultValue="1d"
           value={selectedTimeframe}
-          onValueChange={(value: Timeframe) => {
+          onValueChange={(value: string) => {
             console.log("Timeframe selected:", value);
-            onTimeframeChange(value);
+            onTimeframeChange(value as Timeframe);
           }}
           className="w-[300px]"
         >
@@ -104,6 +102,13 @@ const DashboardHeader = ({
           </div>
         </div>
       </div>
+
+      {isLoading && (
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading...</span>
+        </div>
+      )}
 
       <div className="flex items-center space-x-4">{children}</div>
     </div>

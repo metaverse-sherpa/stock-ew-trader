@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
 import { createChart, ColorType } from "lightweight-charts";
-import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { WavePattern, StockPrice, Timeframe } from "@/lib/types";
 
@@ -28,22 +27,6 @@ const TradingViewChart = ({
   onToggleFibonacci = () => {},
 }: TradingViewChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
-  const waveSeriesRef = useRef<any[]>([]);
-
-  const chartData = React.useMemo(() => {
-    if (!prices || prices.length === 0) return [];
-
-    return prices
-      .map((price) => ({
-        time: new Date(price.timestamp).getTime() / 1000,
-        open: price.open,
-        high: price.high,
-        low: price.low,
-        close: price.close,
-      }))
-      .sort((a, b) => a.time - b.time);
-  }, [prices]);
 
   useEffect(() => {
     console.log('TradingViewChart useEffect triggered:', {
