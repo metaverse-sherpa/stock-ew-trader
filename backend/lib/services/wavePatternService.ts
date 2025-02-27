@@ -12,15 +12,23 @@ export class WavePatternService {
         completed: number;
         total: number;
       }
-    ) => void
+    ) => void,
+    symbols?: string[]
   ) {
     console.log("Starting pattern generation...");
     try {
       onProgress?.("Fetching stocks...");
       console.log("Fetching stocks from database...");
-      const { data: stocks, error: stocksError } = await supabase
+      
+      let query = supabase
         .from("stocks")
         .select("*");
+
+      if (symbols?.length) {
+        query = query.in("symbol", symbols);
+      }
+
+      const { data: stocks, error: stocksError } = await query;
 
       if (stocksError) {
         console.error("Error fetching stocks:", stocksError);
@@ -35,7 +43,7 @@ export class WavePatternService {
       const { error: deleteError } = await supabase
         .from("wave_patterns")
         .delete()
-        .neq("id", "dummy");
+        .neq("id", "00000000-0000-0000-0000-000000000000");
 
       if (deleteError) {
         console.error("Error clearing patterns:", deleteError);
@@ -44,7 +52,7 @@ export class WavePatternService {
 
       console.log("Existing patterns cleared successfully.");
 
-      const timeframes = ['1h', '4h', '1d'];
+      const timeframes = ['1d', '1wk', '1mo'];
       const total = (stocks?.length || 0) * timeframes.length;
       let completed = 0;
 
@@ -106,7 +114,6 @@ export class WavePatternService {
                 id: generateUUID(),
                 symbol: stock.symbol,
                 timeframe,
-                exchange: stock.exchange,
                 status: pattern.status,
                 confidence: pattern.confidence || 0,
                 current_price: prices[prices.length - 1].close,

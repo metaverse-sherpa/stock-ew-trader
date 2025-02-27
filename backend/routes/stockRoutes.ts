@@ -2,6 +2,7 @@ import express from 'express';
 import yahooFinance from 'yahoo-finance2';
 import { supabase } from '../lib/supabase.server.ts'; // Add .ts extension
 import { subDays, formatISO } from 'date-fns';
+import { WavePatternService } from '../lib/services/wavePatternService.ts';
 
 const router = express.Router();
 
@@ -242,6 +243,39 @@ router.post('/updateHistoricalData', async (req: express.Request, res: express.R
   } catch (error) {
     console.error('Error in /updateHistoricalData:', error);
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Add this new endpoint
+router.post('/analyzeWaves', async (req: express.Request, res: express.Response) => {
+  try {
+    console.log('Starting wave pattern analysis...');
+    
+    // Optional: Allow specifying symbols in the request
+    const { symbols } = req.body;
+    
+    const onProgress = (message: string, progress?: {
+      symbol: string;
+      timeframe: string;
+      completed: number;
+      total: number;
+    }) => {
+      console.log(message);
+      // You could also implement WebSocket or SSE here for real-time updates
+    };
+
+    await WavePatternService.generateAllPatterns(onProgress, symbols);
+
+    res.status(200).json({ 
+      message: 'Wave analysis completed successfully',
+      status: 'success'
+    });
+  } catch (error) {
+    console.error('Error in /analyzeWaves:', error);
+    res.status(500).json({ 
+      error: (error as Error).message,
+      status: 'error'
+    });
   }
 });
 
