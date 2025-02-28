@@ -3,7 +3,7 @@ import { Input } from "./ui/input.tsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs.tsx";
 import { Switch } from "./ui/switch.tsx";
 import { Label } from "./ui/label.tsx";
-import { Search, Moon, Sun, Loader2 } from "lucide-react";  
+import { Search, Moon, Sun, Loader2, Settings } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select.tsx";
+import { Button } from "./ui/button.tsx";
 
 import type { Timeframe, WaveStatus } from "../lib/types";  
 
@@ -32,6 +33,7 @@ const DashboardHeader = ({
   onTimeframeChange = () => {},
   onWaveStatusChange = () => {},
   onThemeToggle = () => {},
+  onSettingsClick = () => {},
   isDarkMode = true,
   selectedTimeframe = "1d",
   selectedWaveStatus = "Wave 5",
@@ -85,21 +87,19 @@ const DashboardHeader = ({
       </div>
 
       <div className="flex items-center space-x-4">
-        <div className="theme-toggle">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="theme-toggle"
-              checked={isDarkMode}
-              onCheckedChange={onThemeToggle}
-            />
-            <Label htmlFor="theme-toggle" className="flex items-center space-x-2">
-              {isDarkMode ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Sun className="h-4 w-4" />
-              )}
-            </Label>
-          </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="theme-toggle"
+            checked={isDarkMode}
+            onCheckedChange={onThemeToggle}
+          />
+          <Label htmlFor="theme-toggle" className="flex items-center space-x-2">
+            {isDarkMode ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </Label>
         </div>
 
       </div>
@@ -111,7 +111,7 @@ const DashboardHeader = ({
         </div>
       )}
 
-      <div className="flex items-center space-x-4">{children}</div>
+      {children && <div className="flex items-center space-x-4">{children}</div>}
     </div>
   );
 };
