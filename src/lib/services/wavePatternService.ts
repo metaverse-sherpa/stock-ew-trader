@@ -34,7 +34,7 @@ export class WavePatternService {
 
       console.log("Existing patterns cleared successfully.");
 
-      const timeframes: Timeframe[] = ["1h", "4h", "1d"];
+      const timeframes: Timeframe[] = ["1d", "1wk", "1mo"];
 
       for (let i = 0; i < stocks.length; i++) {
         const stock = stocks[i];

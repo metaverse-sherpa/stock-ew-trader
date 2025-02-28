@@ -83,7 +83,7 @@ export class YahooFinanceService {
         }));
 
       // For smaller timeframes, simulate intraday data from daily data
-      if (timeframe === "1h" || timeframe === "4h") {
+      if (timeframe === "1wk" || timeframe === "1mo") {
         // Generate 7 hourly candles per day (market hours)
         const intradayPrices = [];
 
@@ -197,7 +197,7 @@ export class YahooFinanceService {
       await supabase.from("stocks").delete().neq("symbol", "dummy");
       console.log("Existing data cleared");
 
-      const timeframes: Timeframe[] = ["1h", "4h", "1d"];
+      const timeframes: Timeframe[] = ["1d", "1wk", "1mo"];
 
       // Then fetch new data for each symbol and timeframe
       for (const symbol of symbols) {

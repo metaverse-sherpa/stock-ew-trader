@@ -14,7 +14,7 @@ interface StockGridProps {
 const StockGrid = ({
   onStockSelect,
   searchQuery = "",
-  timeframe = "1h",
+  timeframe = "1d",
   waveStatus = "Wave 5 Bullish",
 }: StockGridProps) => {
   console.log("StockGrid rendered with timeframe:", timeframe);

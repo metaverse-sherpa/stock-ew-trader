@@ -12,7 +12,7 @@ import type { Timeframe, WaveStatus } from "@/lib/types";
 
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
-  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1h");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
   const [selectedWaveStatus, setSelectedWaveStatus] = useState<
     WaveStatus | "all"
   >("Wave 5 Bullish");

@@ -338,9 +338,9 @@ const TradingViewChart = ({
           className="w-[300px]"
         >
           <TabsList>
-            <TabsTrigger value="1h">1h</TabsTrigger>
-            <TabsTrigger value="4h">4h</TabsTrigger>
             <TabsTrigger value="1d">1d</TabsTrigger>
+            <TabsTrigger value="1wk">1wk</TabsTrigger>
+            <TabsTrigger value="1mo">1mo</TabsTrigger>
           </TabsList>
         </Tabs>
 

@@ -37,7 +37,7 @@ export function SettingsDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoAnalysis, setAutoAnalysis] = useState(false);
-  const [defaultTimeframe, setDefaultTimeframe] = useState<Timeframe>("1h");
+  const [defaultTimeframe, setDefaultTimeframe] = useState<Timeframe>("1d");
 
   useEffect(() => {
     // Load default timeframe setting
@@ -112,7 +112,7 @@ export function SettingsDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
@@ -135,9 +135,9 @@ export function SettingsDialog({
                 <SelectValue placeholder="Select timeframe" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1h">1h</SelectItem>
-                <SelectItem value="4h">4h</SelectItem>
                 <SelectItem value="1d">1d</SelectItem>
+                <SelectItem value="1wk">1wk</SelectItem>
+                <SelectItem value="1mo">1mo</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -171,6 +171,24 @@ export function SettingsDialog({
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
               ) : null}
               {isAnalyzing ? "Analyzing..." : "Analyze Now"}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label>Supabase Configuration</Label>
+              <p className="text-sm text-muted-foreground">
+                Connect to a different Supabase database
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsOpen(false);
+                window.location.href = "/supabase-config";
+              }}
+            >
+              Configure
             </Button>
           </div>
         </div>
