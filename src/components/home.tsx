@@ -95,6 +95,7 @@ const Home = () => {
               ? stocks[stocks.indexOf(selectedStock) + 1]
               : undefined
           }
+          selectedWaveStatus={selectedWaveStatus}
         />
       )}
     </div>

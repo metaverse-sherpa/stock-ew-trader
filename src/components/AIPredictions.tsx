@@ -39,7 +39,11 @@ const AIPredictions = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">
-            Wave {wavePattern?.status?.split(" ")[1] || "5"} Predictions
+            Wave{" "}
+            {wavePattern?.status?.includes("Wave 5")
+              ? "5"
+              : wavePattern?.status?.split(" ")[1] || "5"}{" "}
+            Predictions
           </h3>
           <Badge variant="outline" className="px-2 py-1">
             Wave 5 Analysis

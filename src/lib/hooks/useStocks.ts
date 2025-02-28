@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import type { Stock, WavePattern, Timeframe } from "../types";
+import type { Stock, WavePattern, Timeframe, WaveStatus } from "../types";
+import { globalCache } from "../cache";
 
 export function useStocks(
   selectedTimeframe: Timeframe,
@@ -21,6 +22,19 @@ export function useStocks(
   useEffect(() => {
     console.log("Fetching stocks for timeframe:", selectedTimeframe);
     const fetchStocks = async () => {
+      // Check cache first
+      const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}`;
+      const cachedData =
+        globalCache.get<
+          (Stock & { wavePattern: WavePattern | null; prices: any[] })[]
+        >(cacheKey);
+
+      if (cachedData) {
+        console.log("Using cached stock data");
+        setStocks(cachedData);
+        setLoading(false);
+        return;
+      }
       try {
         // First get wave patterns with stocks
         // Fetch wave patterns for all timeframes
@@ -145,6 +159,8 @@ export function useStocks(
           })
           .sort((a, b) => b.wave4EndTime - a.wave4EndTime); // Sort by wave4_end_time desc
 
+        // Store in cache
+        globalCache.set(cacheKey, stocksWithPatterns);
         setStocks(stocksWithPatterns);
       } catch (err) {
         setError(
@@ -166,7 +182,7 @@ export function useStocks(
           event: "*",
           schema: "public",
           table: "wave_patterns",
-          filter: `timeframe=eq.${selectedTimeframe}${waveStatus !== "all" ? ` and status=eq.${waveStatus}` : ""}`,
+          filter: `timeframe=eq.${selectedTimeframe}`,
         },
         (payload) => {
           // Update the stocks list when wave patterns change
@@ -176,11 +192,20 @@ export function useStocks(
               (s) => s.symbol === payload.new.symbol,
             );
 
-            if (index >= 0) {
+            // Only update if the status matches our filter
+            if (
+              index >= 0 &&
+              (waveStatus === "all" || payload.new.status === waveStatus)
+            ) {
               updated[index] = {
                 ...updated[index],
                 wavePattern: payload.new as WavePattern,
               };
+            } else if (waveStatus === payload.new.status) {
+              // This is a new stock that matches our filter, we should refresh the data
+              // Clear cache to force a refresh on next render
+              const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}`;
+              globalCache.delete(cacheKey);
             }
 
             return updated;

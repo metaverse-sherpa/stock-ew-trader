@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import type { WavePattern, StockPrice, Timeframe } from "../types";
+import { globalCache } from "../cache";
 
-export function useStockDetail(symbol: string, timeframe: Timeframe) {
+export function useStockDetail(
+  symbol: string,
+  timeframe: Timeframe,
+  waveStatus?: WaveStatus | "all",
+) {
   const [wavePattern, setWavePattern] = useState<WavePattern | null>(null);
   const [prices, setPrices] = useState<StockPrice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +16,20 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
   useEffect(() => {
     console.log("useStockDetail effect running for:", { symbol, timeframe });
     const fetchStockDetail = async () => {
+      // Check cache first
+      const cacheKey = `stock_detail_${symbol}_${timeframe}_${waveStatus || "any"}`;
+      const cachedData = globalCache.get<{
+        wavePattern: WavePattern | null;
+        prices: StockPrice[];
+      }>(cacheKey);
+
+      if (cachedData) {
+        console.log("Using cached stock detail data");
+        setWavePattern(cachedData.wavePattern);
+        setPrices(cachedData.prices);
+        setLoading(false);
+        return;
+      }
       try {
         const timeframes =
           timeframe === "all" ? ["1h", "4h", "1d"] : [timeframe];
@@ -27,11 +46,18 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
         }
 
         // Fetch wave pattern
-        const { data: patternData, error: patternError } = await supabase
+        let query = supabase
           .from("wave_patterns")
           .select("*")
           .eq("symbol", symbol)
-          .in("timeframe", timeframes)
+          .eq("timeframe", timeframe);
+
+        // Add wave status filter if provided
+        if (waveStatus && waveStatus !== "all") {
+          query = query.eq("status", waveStatus);
+        }
+
+        const { data: patternData, error: patternError } = await query
           .order("created_at", { ascending: false })
           .limit(1)
           .single();
@@ -84,6 +110,18 @@ export function useStockDetail(symbol: string, timeframe: Timeframe) {
         );
         // Always set prices if we have them
         setPrices(priceData || []);
+
+        // Store in cache
+        globalCache.set(cacheKey, {
+          wavePattern: patternData
+            ? {
+                ...patternData,
+                name: stockData?.name || symbol,
+                market_cap: stockData?.market_cap || 0,
+              }
+            : null,
+          prices: priceData || [],
+        });
       } catch (err) {
         setError(
           err instanceof Error

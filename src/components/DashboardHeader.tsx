@@ -49,7 +49,7 @@ const DashboardHeader = ({
             <SelectValue placeholder="Select wave status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Wave 5 Bullish">Wave 5 Bullish</SelectItem>
+            <SelectItem value="Wave 5 Bullish">Wave 5</SelectItem>
             <SelectItem value="Wave A">Wave A</SelectItem>
             <SelectItem value="Wave B">Wave B</SelectItem>
             <SelectItem value="Wave C">Wave C</SelectItem>
@@ -66,7 +66,7 @@ const DashboardHeader = ({
         </div>
 
         <Tabs
-          defaultValue="1h"
+          defaultValue="1d"
           value={selectedTimeframe}
           onValueChange={(value: Timeframe) => {
             console.log("Timeframe selected:", value);
@@ -75,7 +75,6 @@ const DashboardHeader = ({
           className="w-[300px]"
         >
           <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="1d">1d</TabsTrigger>
             <TabsTrigger value="1wk">1wk</TabsTrigger>
             <TabsTrigger value="1mo">1mo</TabsTrigger>

@@ -23,6 +23,7 @@ interface DetailedStockViewProps {
   onNavigate?: (symbol: string) => void;
   prevStock?: string;
   nextStock?: string;
+  selectedWaveStatus?: WaveStatus | "all";
 }
 
 const DetailedStockView = ({
@@ -34,6 +35,7 @@ const DetailedStockView = ({
   onNavigate = () => {},
   prevStock,
   nextStock,
+  selectedWaveStatus = "Wave 5 Bullish",
 }: DetailedStockViewProps) => {
   const [showElliottWave, setShowElliottWave] = useState(true);
   const [showFibonacci, setShowFibonacci] = useState(false);
@@ -42,6 +44,7 @@ const DetailedStockView = ({
   const { wavePattern, prices, loading, error } = useStockDetail(
     symbol,
     timeframe,
+    selectedWaveStatus,
   );
 
   // Update stock name when wave pattern changes

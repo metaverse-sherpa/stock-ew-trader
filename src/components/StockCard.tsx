@@ -33,7 +33,7 @@ function StockCard({
   price = 150.25,
   change = 2.5,
   confidence = 85,
-  waveStatus = "Wave 5 Bullish",
+  waveStatus = "Wave 5",
   onClick = () => {},
   prices = [],
   timeframe = "1d",

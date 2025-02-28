@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { globalCache } from "@/lib/cache";
 import { useToast } from "./ui/use-toast";
 import {
   Dialog,
@@ -189,6 +190,27 @@ export function SettingsDialog({
               }}
             >
               Configure
+            </Button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label>Clear Cache</Label>
+              <p className="text-sm text-muted-foreground">
+                Clear cached data to fetch fresh data from the server
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                globalCache.clear();
+                toast({
+                  title: "Cache Cleared",
+                  description: "All cached data has been cleared.",
+                });
+              }}
+            >
+              Clear Cache
             </Button>
           </div>
         </div>
