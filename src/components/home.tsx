@@ -46,6 +46,7 @@ const Home = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // Load default timeframe on initial render
   useEffect(() => {
@@ -133,8 +134,20 @@ const Home = () => {
     }
   };
 
-  const handleTimeframeChange = (tf: Timeframe) => {
-    setSelectedTimeframe(tf);
+  const handleTimeframeChange = async (timeframe: Timeframe) => {
+    setIsLoading(true);
+    setSelectedTimeframe(timeframe);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  const handleWaveStatusChange = async (status: ExtendedWaveStatus) => {
+    setIsLoading(true);
+    setSelectedWaveStatus(status);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   };
 
   const handleStockSelect = (
@@ -213,14 +226,23 @@ const Home = () => {
       <DashboardHeader
         onSearch={setSearchQuery}
         onTimeframeChange={handleTimeframeChange}
-        onWaveStatusChange={(status: WaveStatus | "all") => 
-          setSelectedWaveStatus(status as ExtendedWaveStatus)
-        }
+        onWaveStatusChange={handleWaveStatusChange}
         onThemeToggle={() => setIsDarkMode(!isDarkMode)}
         isDarkMode={isDarkMode}
         selectedTimeframe={selectedTimeframe}
         selectedWaveStatus={selectedWaveStatus as WaveStatus | "all"}
-      />
+        isLoading={isLoading}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsSettingsOpen(true)}
+          className="flex items-center space-x-2"
+        >
+          <Settings className="h-4 w-4" />
+          <span>Settings</span>
+        </Button>
+      </DashboardHeader>
 
       <LoadingDialog isOpen={isLoading} />
 
@@ -245,6 +267,12 @@ const Home = () => {
           onClose={() => setSelectedStock(null)}
         />
       )}
+
+      <SettingsDialog
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onTimeframeChange={handleTimeframeChange}
+      />
     </div>
   );
 };

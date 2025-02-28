@@ -17,7 +17,7 @@ export interface StockPrice {
   // Add other fields as needed
 }
 
-export type Timeframe = '1d' | '1w' | '1m' | '3m' | '6m' | '1y';
+export type Timeframe = '1d' | '1wk' | '1mo';
 export type WaveStatus = 'Wave 1' | 'Wave 2' | 'Wave 3' | 'Wave 4' | 'Wave 5' | 'Wave A' | 'Wave B' | 'Wave C';
 
 export interface WavePattern {

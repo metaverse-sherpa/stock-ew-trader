@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "./ui/dialog.tsx";
 import { Button } from "./ui/button.tsx";
 import { Switch } from "./ui/switch.tsx";
@@ -20,22 +19,22 @@ import {
   SelectValue,
 } from "./ui/select.tsx";
 import { RefreshCw } from "lucide-react";
-import { WavePatternService } from '../../shared/lib/services/wavePatternService.ts';
 import { supabase } from "../lib/supabase.client";
 import type { Timeframe } from "../lib/types";
 import { Progress } from "./ui/progress.tsx";
-
 import { AddStockSymbol } from "./AddStockSymbol.tsx";
 
 interface SettingsDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
   onTimeframeChange?: (timeframe: Timeframe) => void;
-  trigger?: React.ReactNode;
 }
 
 export const SettingsDialog = ({
+  isOpen,
+  onClose,
   onTimeframeChange,
-  trigger,
-}: SettingsDialogProps = {}) => {
+}: SettingsDialogProps) => {
   const { toast } = useToast();
   const [analysisState, setAnalysisState] = useState<{
     isAnalyzing: boolean;
@@ -83,29 +82,19 @@ export const SettingsDialog = ({
   };
 
   const handleAnalyzeWaves = async () => {
-    const startTime = Date.now();
-
     try {
       setAnalysisState({ isAnalyzing: true, progress: null });
 
-      await WavePatternService.generateAllPatterns((message, progress) => {
-        setAnalysisState(prev => ({
-          ...prev,
-          progress: {
-            message,
-            symbol: progress?.symbol || '',
-            timeframe: progress?.timeframe || '',
-            completed: progress?.completed || 0,
-            total: progress?.total || 0,
-          },
-        }));
+      const response = await fetch('/api/analyzeWaves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols: [] }), // Pass any required symbols
       });
 
-      const endTime = Date.now();
-      const timeElapsed = ((endTime - startTime) / 1000).toFixed(1);
+      if (!response.ok) throw new Error('API Error');
 
-      showToast("Analysis Complete", `Wave pattern analysis finished successfully. Time elapsed: ${timeElapsed} seconds`);
-
+      const result = await response.json();
+      showToast("Analysis Complete", result.message);
     } catch (error) {
       console.error("Error analyzing waves:", error);
       showToast("Analysis Error", "Failed to complete wave analysis", "destructive");
@@ -145,10 +134,7 @@ export const SettingsDialog = ({
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
