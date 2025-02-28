@@ -123,7 +123,7 @@ function StockCard({
         areaSeries.setData(data);
 
         // Add Elliott Wave lines if we have wave data
-        if (waveStatus?.includes("Wave 5") && data.length > 0) {
+        if (waveStatus?.includes("Wave 5 Bullish") && data.length > 0) {
           // Define wave points (simplified for the mini chart)
           const wavePoints = [
             { price: price * 0.95 }, // Approximate wave points based on current price

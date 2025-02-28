@@ -7,7 +7,7 @@ import { LoadingDialog } from "./LoadingDialog";
 import { Button } from "./ui/button";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "../lib/supabase.client";
-import type { Timeframe, WaveStatus } from "../lib/types";
+import type { Timeframe, WaveStatus, Stock } from "../lib/types";
 import ErrorBoundary from './ErrorBoundary';
 import { useQuery } from '@tanstack/react-query';
 
@@ -15,13 +15,6 @@ import { useQuery } from '@tanstack/react-query';
 type ExtendedWaveStatus = WaveStatus | "Wave 5 Bullish" | "all";
 
 // Add interface for Stock
-interface Stock {
-  symbol: string;
-  name: string;
-  price: number;
-  historicalData?: Array<{ timestamp: string; close: number }>;
-}
-
 interface NavigationItem {
   symbol: string;
   timeframe: Timeframe;
@@ -31,13 +24,14 @@ interface NavigationItem {
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
-  const [selectedWaveStatus, setSelectedWaveStatus] = useState<ExtendedWaveStatus>("Wave 5");
+  const [selectedWaveStatus, setSelectedWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
 
   const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1d");
-  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<ExtendedWaveStatus>("Wave 5");
+  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
   const [navigationList, setNavigationList] = useState<NavigationItem[]>([]);
   const [error] = useState(null);
   const [currentPage] = useState(1);
@@ -59,24 +53,24 @@ const Home = () => {
 
   // Update fetchStocks function
   const fetchStocks = async (): Promise<Stock[]> => {
-    // Check for cached data in local storage
-    const cachedData = localStorage.getItem('cachedStocks');
-    const cachedTimestamp = localStorage.getItem('cachedStocksTimestamp');
-
-    if (cachedData && cachedTimestamp) {
-      const now = new Date().getTime();
-      const cacheAge = now - parseInt(cachedTimestamp, 10);
-
-      // If the cache is less than 24 hours old, return the cached data
-      if (cacheAge < 24 * 60 * 60 * 1000) {
-        return JSON.parse(cachedData);
-      }
-    }
-
     try {
+      // Step 1: Fetch distinct symbols from wave_patterns
+      const { data: waveSymbols, error: waveError } = await supabase
+        .from('wave_patterns')
+        .select('symbol')
+        .eq('wave_status', selectedWaveStatus)
+        .eq('timeframe', selectedTimeframe)
+        .limit(1); // Use limit to ensure we get distinct symbols
+
+      if (waveError) throw waveError;
+
+      const symbols = [...new Set(waveSymbols.map(wave => wave.symbol))]; // Get unique symbols
+
+      // Step 2: Fetch stocks using the distinct symbols
       const { data: stocks, error } = await supabase
         .from('stocks')
         .select('symbol, name')
+        .in('symbol', symbols)
         .order('symbol', { ascending: true });
 
       if (error) throw error;
@@ -106,8 +100,7 @@ const Home = () => {
               .select('timestamp, open, high, low, close')
               .eq('symbol', stock.symbol)
               .eq('timeframe', selectedTimeframe)
-              .order('timestamp', { ascending: true })
-              .limit(30);
+              .order('timestamp', { ascending: true });
 
             return {
               symbol: stock.symbol,
@@ -137,10 +130,6 @@ const Home = () => {
         })
       );
 
-      // Cache the data in local storage
-      localStorage.setItem('cachedStocks', JSON.stringify(stocksWithPrices));
-      localStorage.setItem('cachedStocksTimestamp', new Date().getTime().toString());
-
       return stocksWithPrices;  
     } catch (err) {
       console.error('Error fetching stocks:', err);
@@ -164,7 +153,7 @@ const Home = () => {
     }, 1000);
   };
 
-  const handleStockSelect = (
+  const handleStockSelect = async (
     symbol: string,
     navList: NavigationItem[],
     clickedTimeframe?: Timeframe,
@@ -177,6 +166,19 @@ const Home = () => {
       navList
     });
 
+    // Fetch historical data for the selected stock
+    const { data, error } = await supabase
+      .from("stock_prices")
+      .select("timestamp, open, high, low, close")
+      .eq("symbol", symbol)
+      .order("timestamp", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching historical data:", error);
+      return;
+    }
+
+    setHistoricalData(data || []);
     setSelectedStock(symbol);
     setNavigationList(navList as NavigationItem[]);
     
@@ -270,10 +272,11 @@ const Home = () => {
           stock={{
             symbol: selectedStock,
             name: stocksData?.find(s => s.symbol === selectedStock)?.name || selectedStock,
-            price: stocksData?.find(s => s.symbol === selectedStock)?.price || 0,
+            currentPrice: stocksData?.find(s => s.symbol === selectedStock)?.currentPrice || 0,
             waveStatus: selectedDetailWaveStatus,
             timeframe: selectedDetailTimeframe
           }}
+          historicalData={historicalData}
           onClose={() => setSelectedStock(null)}
         />
       )}

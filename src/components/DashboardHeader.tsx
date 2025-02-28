@@ -36,7 +36,7 @@ const DashboardHeader = ({
   onSettingsClick = () => {},
   isDarkMode = true,
   selectedTimeframe = "1d",
-  selectedWaveStatus = "Wave 5",
+  selectedWaveStatus = "Wave 5 Bullish",
   isLoading = false,
   children,
 }: DashboardHeaderProps) => {
@@ -53,7 +53,7 @@ const DashboardHeader = ({
             <SelectValue placeholder="Select wave status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Wave 5">Wave 5</SelectItem>
+            <SelectItem value="Wave 5 Bullish">Wave 5 Bullish</SelectItem>
             <SelectItem value="Wave A">Wave A</SelectItem>
             <SelectItem value="Wave B">Wave B</SelectItem>
             <SelectItem value="Wave C">Wave C</SelectItem>

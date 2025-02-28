@@ -4,7 +4,7 @@ import MiniChart from './MiniChart';
 
 interface StockGridProps {
   stocks: Stock[];
-  onStockSelect: (symbol: string) => void;
+  onStockSelect: (symbol: string, historicalData: any[]) => void;
 }
 
 const StockGrid = ({ stocks = [], onStockSelect }: StockGridProps) => {
@@ -26,7 +26,7 @@ const StockGrid = ({ stocks = [], onStockSelect }: StockGridProps) => {
           <div
             key={stock.symbol}
             className="p-4 border rounded-lg hover:shadow-md cursor-pointer"
-            onClick={() => onStockSelect(stock.symbol)}
+            onClick={() => onStockSelect(stock.symbol, stock.historicalData)}
           >
             <div className="flex justify-between items-center">
               <h3 className="font-bold">{stock.name}</h3>
