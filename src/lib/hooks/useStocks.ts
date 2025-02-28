@@ -49,7 +49,7 @@ export function useStocks(
           return;
         }
 
-        // Then get wave patterns
+        // Get all wave patterns for the selected timeframe
         const { data: wavePatterns, error: waveError } = await supabase
           .from("wave_patterns")
           .select("*")
@@ -124,40 +124,75 @@ export function useStocks(
           {} as Record<string, Record<Timeframe, any>>,
         );
 
-        // Create stock entries for all patterns when 'all' is selected, or filter by timeframe
-        const stocksWithPatterns = Object.entries(patternsBySymbol)
-          .filter(([_, patterns]) => {
-            // First check timeframe
-            const hasTimeframe =
-              selectedTimeframe === "all" ? true : patterns[selectedTimeframe];
-            if (!hasTimeframe) return false;
+        // For specific wave status, get the most recent pattern for each stock
+        let stocksWithPatterns = [];
 
-            // Then check wave status
-            const pattern =
-              selectedTimeframe === "all"
-                ? Object.values(patterns)[0]
-                : patterns[selectedTimeframe];
-            return waveStatus === "all" ? true : pattern.status === waveStatus;
-          })
-          .map(([symbol, patterns]) => {
-            const pattern =
-              selectedTimeframe === "all"
-                ? Object.values(patterns)[0]
-                : patterns[selectedTimeframe];
-            return {
-              symbol,
-              exchange: stocksMap[symbol]?.exchange || "NYSE",
-              name: stocksMap[symbol]?.name || symbol,
-              created_at: stocksMap[symbol]?.created_at,
-              updated_at: stocksMap[symbol]?.updated_at,
+        if (waveStatus === "all") {
+          // For "all" waves, get the most recent pattern for each wave status for each stock
+          // Group by symbol and status
+          const patternsBySymbolAndStatus = {};
+
+          wavePatterns.forEach((pattern) => {
+            const key = `${pattern.symbol}_${pattern.status}`;
+            if (
+              !patternsBySymbolAndStatus[key] ||
+              new Date(pattern.wave1_start_time) >
+                new Date(patternsBySymbolAndStatus[key].wave1_start_time)
+            ) {
+              patternsBySymbolAndStatus[key] = pattern;
+            }
+          });
+
+          // Convert to array
+          stocksWithPatterns = Object.values(patternsBySymbolAndStatus).map(
+            (pattern) => ({
+              symbol: pattern.symbol,
+              exchange: stocksMap[pattern.symbol]?.exchange || "NYSE",
+              name: stocksMap[pattern.symbol]?.name || pattern.symbol,
+              created_at: stocksMap[pattern.symbol]?.created_at,
+              updated_at: stocksMap[pattern.symbol]?.updated_at,
               wavePattern: pattern,
-              prices: stockPrices[symbol] || [],
-              wave4EndTime: pattern?.wave4_end_time
-                ? new Date(pattern.wave4_end_time).getTime()
+              prices: stockPrices[pattern.symbol] || [],
+              wave1StartTime: pattern?.wave1_start_time
+                ? new Date(pattern.wave1_start_time).getTime()
                 : 0,
-            };
-          })
-          .sort((a, b) => b.wave4EndTime - a.wave4EndTime); // Sort by wave4_end_time desc
+            }),
+          );
+        } else {
+          // For specific wave status, get the most recent pattern for each stock
+          const patternsBySymbol = {};
+
+          wavePatterns
+            .filter((pattern) => pattern.status === waveStatus)
+            .forEach((pattern) => {
+              if (
+                !patternsBySymbol[pattern.symbol] ||
+                new Date(pattern.wave1_start_time) >
+                  new Date(patternsBySymbol[pattern.symbol].wave1_start_time)
+              ) {
+                patternsBySymbol[pattern.symbol] = pattern;
+              }
+            });
+
+          // Convert to array
+          stocksWithPatterns = Object.values(patternsBySymbol).map(
+            (pattern) => ({
+              symbol: pattern.symbol,
+              exchange: stocksMap[pattern.symbol]?.exchange || "NYSE",
+              name: stocksMap[pattern.symbol]?.name || pattern.symbol,
+              created_at: stocksMap[pattern.symbol]?.created_at,
+              updated_at: stocksMap[pattern.symbol]?.updated_at,
+              wavePattern: pattern,
+              prices: stockPrices[pattern.symbol] || [],
+              wave1StartTime: pattern?.wave1_start_time
+                ? new Date(pattern.wave1_start_time).getTime()
+                : 0,
+            }),
+          );
+        }
+
+        // Sort by wave1_start_time desc (most recent first)
+        stocksWithPatterns.sort((a, b) => b.wave1StartTime - a.wave1StartTime);
 
         // Store in cache
         globalCache.set(cacheKey, stocksWithPatterns);

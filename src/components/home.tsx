@@ -19,6 +19,8 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  const [selectedStockWaveStatus, setSelectedStockWaveStatus] =
+    useState<WaveStatus | null>(null);
   const [stocks, setStocks] = useState<string[]>([]);
 
   // Load default timeframe on initial render
@@ -66,11 +68,12 @@ const Home = () => {
           searchQuery={searchQuery}
           timeframe={selectedTimeframe}
           waveStatus={selectedWaveStatus}
-          onStockSelect={(symbol, allSymbols) => {
+          onStockSelect={(symbol, allSymbols, waveStatus) => {
             if (symbol === "") {
               setIsLoading(false);
             } else {
               setSelectedStock(symbol);
+              setSelectedStockWaveStatus(waveStatus as WaveStatus);
               if (allSymbols) setStocks(allSymbols);
             }
           }}
@@ -95,7 +98,7 @@ const Home = () => {
               ? stocks[stocks.indexOf(selectedStock) + 1]
               : undefined
           }
-          selectedWaveStatus={selectedWaveStatus}
+          selectedWaveStatus={selectedStockWaveStatus || selectedWaveStatus}
         />
       )}
     </div>

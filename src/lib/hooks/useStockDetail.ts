@@ -52,10 +52,11 @@ export function useStockDetail(
           .eq("symbol", symbol)
           .eq("timeframe", timeframe);
 
-        // Add wave status filter if provided
+        // Add wave status filter if provided and not 'all'
         if (waveStatus && waveStatus !== "all") {
           query = query.eq("status", waveStatus);
         }
+        // When 'all' is selected, we don't filter by status and just get the most recent pattern
 
         const { data: patternData, error: patternError } = await query
           .order("created_at", { ascending: false })

@@ -8,7 +8,11 @@ interface StockGridProps {
   searchQuery?: string;
   timeframe?: Timeframe;
   waveStatus?: WaveStatus | "all";
-  onStockSelect?: (symbol: string, allSymbols?: string[]) => void;
+  onStockSelect?: (
+    symbol: string,
+    allSymbols?: string[],
+    waveStatus?: string,
+  ) => void;
 }
 
 const StockGrid = ({
@@ -92,6 +96,7 @@ const StockGrid = ({
             onStockSelect?.(
               stock.symbol,
               filteredStocks.map((s) => s.symbol),
+              stock.wavePattern?.status,
             )
           }
           prices={stock.prices || []}
