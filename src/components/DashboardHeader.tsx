@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Input } from "./ui/input.tsx";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs.tsx";
 import { Switch } from "./ui/switch.tsx";
 import { Label } from "./ui/label.tsx";
-import { Search, Moon, Sun, Loader2 } from "lucide-react";
+import { Search, Moon, Sun, Loader2 } from "lucide-react";  
 import {
   Select,
   SelectContent,
@@ -20,6 +20,7 @@ interface DashboardHeaderProps {
   onTimeframeChange?: (timeframe: Timeframe) => void;
   onWaveStatusChange?: (status: WaveStatus | "all") => void;
   onThemeToggle?: () => void;
+  onSettingsClick?: () => void;
   isDarkMode?: boolean;
   selectedTimeframe?: Timeframe;
   selectedWaveStatus?: WaveStatus | "all";
@@ -100,6 +101,7 @@ const DashboardHeader = ({
             </Label>
           </div>
         </div>
+
       </div>
 
       {isLoading && (

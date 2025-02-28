@@ -4,13 +4,11 @@ import DashboardHeader from './DashboardHeader';
 import DetailedStockView from "./DetailedStockView";
 import StockGrid from "./StockGrid";
 import { LoadingDialog } from "./LoadingDialog";
-import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "./ui/button";
-import { Settings, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { supabase } from "../lib/supabase.client";
 import type { Timeframe, WaveStatus } from "../lib/types";
 import ErrorBoundary from './ErrorBoundary';
-import { useStockData } from "../hooks/useStockData";
 import { useQuery } from '@tanstack/react-query';
 
 // Update WaveStatus type
@@ -37,16 +35,14 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
-  const [stocks, setStocks] = useState<string[]>([]);
+
   const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1d");
   const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
   const [navigationList, setNavigationList] = useState<NavigationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [error] = useState(null);
+  const [currentPage] = useState(1);
   const itemsPerPage = 20;
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [ setIsSettingsOpen] = useState(false);
   
   // Load default timeframe on initial render
   useEffect(() => {
@@ -127,7 +123,7 @@ const Home = () => {
         })
       );
 
-      return stocksWithPrices;
+      return stocksWithPrices;  
     } catch (err) {
       console.error('Error fetching stocks:', err);
       throw err;
@@ -228,21 +224,12 @@ const Home = () => {
         onTimeframeChange={handleTimeframeChange}
         onWaveStatusChange={handleWaveStatusChange}
         onThemeToggle={() => setIsDarkMode(!isDarkMode)}
+        onSettingsClick={() => setIsSettingsOpen(true)}
         isDarkMode={isDarkMode}
         selectedTimeframe={selectedTimeframe}
         selectedWaveStatus={selectedWaveStatus as WaveStatus | "all"}
         isLoading={isLoading}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsSettingsOpen(true)}
-          className="flex items-center space-x-2"
-        >
-          <Settings className="h-4 w-4" />
-          <span>Settings</span>
-        </Button>
-      </DashboardHeader>
+      />
 
       <LoadingDialog isOpen={isLoading} />
 
@@ -267,12 +254,6 @@ const Home = () => {
           onClose={() => setSelectedStock(null)}
         />
       )}
-
-      <SettingsDialog
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onTimeframeChange={handleTimeframeChange}
-      />
     </div>
   );
 };
