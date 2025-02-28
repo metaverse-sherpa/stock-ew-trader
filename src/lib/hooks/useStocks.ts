@@ -7,12 +7,21 @@ export function useStocks(
   selectedTimeframe: Timeframe,
   waveStatus: WaveStatus | "all" = "Wave 5 Bullish",
 ) {
-  // Cache prices for mini charts
-  const [priceCache, setPriceCache] = useState<Record<string, any[]>>({});
+  // Use global cache for prices to persist between renders
+  const [priceCache, setPriceCache] = useState<Record<string, any[]>>(() => {
+    const cachedPrices = {};
+    // Pre-populate from global cache if available
+    for (const key of Object.keys(globalCache.getAll() || {})) {
+      if (key.includes("_prices_")) {
+        cachedPrices[key.replace("_prices_", "")] = globalCache.get(key);
+      }
+    }
+    return cachedPrices;
+  });
 
   // Only fetch the selected timeframe
   const timeframes: Timeframe[] = [selectedTimeframe];
-  console.log("useStocks hook called with timeframe:", selectedTimeframe);
+  // Remove unnecessary console.log
   const [stocks, setStocks] = useState<
     (Stock & { wavePattern: WavePattern | null; prices: any[] })[]
   >([]);
@@ -20,7 +29,7 @@ export function useStocks(
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    console.log("Fetching stocks for timeframe:", selectedTimeframe);
+    // Remove unnecessary console.log
     const fetchStocks = async () => {
       // Check cache first
       const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}`;
@@ -67,49 +76,55 @@ export function useStocks(
           stocks.map((stock) => [stock.symbol, stock]),
         );
 
-        // Then get prices for each stock, using cache when possible
-        const pricesPromises = wavePatterns.map(async (pattern) => {
-          const cacheKey = `${pattern.symbol}_${selectedTimeframe}`;
+        // Create a map to store prices for each symbol
+        const stockPrices = {};
 
-          // Use cached data if available
-          if (priceCache[cacheKey]) {
-            return priceCache[cacheKey];
-          }
+        // Get unique symbols from wave patterns to reduce database queries
+        const uniqueSymbols = [
+          ...new Set(wavePatterns.map((pattern) => pattern.symbol)),
+        ];
 
-          const { data, error } = await supabase
-            .from("stock_prices")
-            .select()
-            .eq("symbol", pattern.symbol)
-            .eq("timeframe", selectedTimeframe)
-            .order("timestamp", { ascending: true })
-            .limit(100);
+        // Fetch prices for all symbols in parallel instead of sequentially
+        await Promise.all(
+          uniqueSymbols.map(async (symbol) => {
+            const cacheKey = `${symbol}_${selectedTimeframe}`;
 
-          if (error) throw error;
+            // Use cached data if available
+            if (priceCache[cacheKey]) {
+              stockPrices[symbol] = priceCache[cacheKey];
+              return; // Use return instead of continue in async callback
+            }
 
-          const prices =
-            data?.map((price) => ({
-              ...price,
-              timeframe: price.timeframe,
-            })) || [];
+            const { data, error } = await supabase
+              .from("stock_prices")
+              .select()
+              .eq("symbol", symbol)
+              .eq("timeframe", selectedTimeframe)
+              .order("timestamp", { ascending: true })
+              .limit(100);
 
-          // Update cache
-          setPriceCache((prev) => ({
-            ...prev,
-            [cacheKey]: prices,
-          }));
+            if (error) throw error;
 
-          return prices;
-        });
+            const prices =
+              data?.map((price) => ({
+                ...price,
+                timeframe: price.timeframe,
+              })) || [];
 
-        const pricesResults = await Promise.all(pricesPromises);
-        console.log("Prices results:", pricesResults);
+            // Update both local and global cache
+            setPriceCache((prev) => ({
+              ...prev,
+              [cacheKey]: prices,
+            }));
 
-        const stockPrices = Object.fromEntries(
-          pricesResults.map((prices, index) => [
-            wavePatterns[index].symbol,
-            prices,
-          ]),
+            // Store in global cache with a specific prefix
+            globalCache.set(`_prices_${cacheKey}`, prices);
+
+            stockPrices[symbol] = prices;
+          }),
         );
+
+        // stockPrices is now populated from the batch queries above
 
         // Transform the data
         // Group patterns by symbol

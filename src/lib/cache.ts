@@ -41,6 +41,18 @@ class Cache {
     return item.data as T;
   }
 
+  public getAll(): Record<string, any> {
+    const result = {};
+    for (const key in this.cache) {
+      if (Date.now() <= this.cache[key].expiresAt) {
+        result[key] = this.cache[key].data;
+      } else {
+        this.delete(key);
+      }
+    }
+    return result;
+  }
+
   public delete(key: string): void {
     delete this.cache[key];
   }

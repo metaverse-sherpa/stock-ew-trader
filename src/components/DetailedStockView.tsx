@@ -8,6 +8,7 @@ import {
 } from "./ui/dialog";
 import TradingViewChart from "./TradingViewChart";
 import AIPredictions from "./AIPredictions";
+import StockSentiment from "./StockSentiment";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
@@ -56,7 +57,7 @@ const DetailedStockView = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[90vw] w-[1512px] max-h-[90vh] bg-background p-6">
+      <DialogContent className="max-w-[90vw] w-[1512px] max-h-[90vh] bg-background p-6 overflow-y-auto">
         <DialogTitle className="sr-only">
           Stock Details for {symbol}
         </DialogTitle>
@@ -114,29 +115,32 @@ const DetailedStockView = ({
               onToggleElliottWave={setShowElliottWave}
               onToggleFibonacci={setShowFibonacci}
             />
-            {wavePattern && (
-              <AIPredictions
-                currentPrice={wavePattern.current_price}
-                wavePattern={wavePattern}
-                targets={[
-                  {
-                    price: wavePattern.target_price1,
-                    confidence: wavePattern.confidence,
-                    type: "resistance",
-                  },
-                  {
-                    price: wavePattern.target_price2,
-                    confidence: Math.max(wavePattern.confidence - 10, 0),
-                    type: "resistance",
-                  },
-                  {
-                    price: wavePattern.target_price3,
-                    confidence: Math.max(wavePattern.confidence - 20, 0),
-                    type: "resistance",
-                  },
-                ]}
-              />
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {wavePattern && (
+                <AIPredictions
+                  currentPrice={wavePattern.current_price}
+                  wavePattern={wavePattern}
+                  targets={[
+                    {
+                      price: wavePattern.target_price1,
+                      confidence: wavePattern.confidence,
+                      type: "resistance",
+                    },
+                    {
+                      price: wavePattern.target_price2,
+                      confidence: Math.max(wavePattern.confidence - 10, 0),
+                      type: "resistance",
+                    },
+                    {
+                      price: wavePattern.target_price3,
+                      confidence: Math.max(wavePattern.confidence - 20, 0),
+                      type: "resistance",
+                    },
+                  ]}
+                />
+              )}
+              <StockSentiment symbol={symbol} />
+            </div>
           </div>
         )}
       </DialogContent>

@@ -21,23 +21,17 @@ const StockGrid = ({
   timeframe = "1d",
   waveStatus = "Wave 5 Bullish",
 }: StockGridProps) => {
-  console.log("StockGrid rendered with timeframe:", timeframe);
   const { stocks, loading, error } = useStocks(timeframe, waveStatus);
 
   // Hide loading dialog when stocks are loaded
   React.useEffect(() => {
-    if (onStockSelect) {
-      // Small delay to ensure the grid is rendered
-      const timer = setTimeout(() => {
-        onStockSelect("");
-      }, 500);
-      return () => clearTimeout(timer);
+    if (onStockSelect && !loading) {
+      // Immediately notify parent that loading is complete
+      onStockSelect("");
     }
-  }, [stocks, onStockSelect]);
+  }, [loading, onStockSelect]);
 
-  React.useEffect(() => {
-    console.log("StockGrid timeframe changed:", timeframe);
-  }, [timeframe]);
+  // Remove unnecessary console.log
 
   const filteredStocks = React.useMemo(() => {
     if (!searchQuery) return stocks;

@@ -9,12 +9,124 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      stock_prices: {
+        Row: {
+          close: number
+          created_at: string
+          high: number
+          id: string
+          low: number
+          open: number
+          symbol: string
+          timeframe: string
+          timestamp: string
+          updated_at: string
+          volume: number
+          wave1_start: boolean | null
+        }
+        Insert: {
+          close: number
+          created_at?: string
+          high: number
+          id?: string
+          low: number
+          open: number
+          symbol: string
+          timeframe: string
+          timestamp: string
+          updated_at?: string
+          volume: number
+          wave1_start?: boolean | null
+        }
+        Update: {
+          close?: number
+          created_at?: string
+          high?: number
+          id?: string
+          low?: number
+          open?: number
+          symbol?: string
+          timeframe?: string
+          timestamp?: string
+          updated_at?: string
+          volume?: number
+          wave1_start?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_prices_symbol_fkey"
+            columns: ["symbol"]
+            isOneToOne: false
+            referencedRelation: "stocks"
+            referencedColumns: ["symbol"]
+          },
+        ]
+      }
+      stocks: {
+        Row: {
+          created_at: string | null
+          exchange: string | null
+          industry: string | null
+          market_cap: number | null
+          name: string | null
+          price: number | null
+          sector: string | null
+          symbol: string
+          updated_at: string | null
+          volume: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          exchange?: string | null
+          industry?: string | null
+          market_cap?: number | null
+          name?: string | null
+          price?: number | null
+          sector?: string | null
+          symbol: string
+          updated_at?: string | null
+          volume?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          exchange?: string | null
+          industry?: string | null
+          market_cap?: number | null
+          name?: string | null
+          price?: number | null
+          sector?: string | null
+          symbol?: string
+          updated_at?: string | null
+          volume?: number | null
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          default_timeframe: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_timeframe?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_timeframe?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       wave_patterns: {
         Row: {
           confidence: number
           created_at: string | null
           current_price: number
-          exchange: string
           id: string
           start_time: string
           status: string
@@ -24,22 +136,37 @@ export type Database = {
           target_price3: number
           timeframe: string
           updated_at: string | null
-          wave1_end: number
+          wave_a_end: number | null
+          wave_a_end_time: string | null
+          wave_a_start: number | null
+          wave_b_end: number | null
+          wave_b_end_time: string | null
+          wave_b_start: number | null
+          wave_c_end: number | null
+          wave_c_end_time: string | null
+          wave_c_start: number | null
+          wave1_end: number | null
+          wave1_end_time: string | null
           wave1_start: number
-          wave2_end: number
-          wave2_start: number
-          wave3_end: number
-          wave3_start: number
-          wave4_end: number
-          wave4_start: number
-          wave5_start: number
+          wave1_start_time: string | null
+          wave2_end: number | null
+          wave2_end_time: string | null
+          wave2_start: number | null
+          wave3_end: number | null
+          wave3_end_time: string | null
+          wave3_start: number | null
+          wave4_end: number | null
+          wave4_end_time: string | null
+          wave4_start: number | null
+          wave5_end: number | null
+          wave5_end_time: string | null
+          wave5_start: number | null
         }
         Insert: {
           confidence: number
           created_at?: string | null
           current_price: number
-          exchange: string
-          id?: string
+          id: string
           start_time: string
           status: string
           symbol: string
@@ -48,21 +175,36 @@ export type Database = {
           target_price3: number
           timeframe: string
           updated_at?: string | null
-          wave1_end: number
+          wave_a_end?: number | null
+          wave_a_end_time?: string | null
+          wave_a_start?: number | null
+          wave_b_end?: number | null
+          wave_b_end_time?: string | null
+          wave_b_start?: number | null
+          wave_c_end?: number | null
+          wave_c_end_time?: string | null
+          wave_c_start?: number | null
+          wave1_end?: number | null
+          wave1_end_time?: string | null
           wave1_start: number
-          wave2_end: number
-          wave2_start: number
-          wave3_end: number
-          wave3_start: number
-          wave4_end: number
-          wave4_start: number
-          wave5_start: number
+          wave1_start_time?: string | null
+          wave2_end?: number | null
+          wave2_end_time?: string | null
+          wave2_start?: number | null
+          wave3_end?: number | null
+          wave3_end_time?: string | null
+          wave3_start?: number | null
+          wave4_end?: number | null
+          wave4_end_time?: string | null
+          wave4_start?: number | null
+          wave5_end?: number | null
+          wave5_end_time?: string | null
+          wave5_start?: number | null
         }
         Update: {
           confidence?: number
           created_at?: string | null
           current_price?: number
-          exchange?: string
           id?: string
           start_time?: string
           status?: string
@@ -72,24 +214,57 @@ export type Database = {
           target_price3?: number
           timeframe?: string
           updated_at?: string | null
-          wave1_end?: number
+          wave_a_end?: number | null
+          wave_a_end_time?: string | null
+          wave_a_start?: number | null
+          wave_b_end?: number | null
+          wave_b_end_time?: string | null
+          wave_b_start?: number | null
+          wave_c_end?: number | null
+          wave_c_end_time?: string | null
+          wave_c_start?: number | null
+          wave1_end?: number | null
+          wave1_end_time?: string | null
           wave1_start?: number
-          wave2_end?: number
-          wave2_start?: number
-          wave3_end?: number
-          wave3_start?: number
-          wave4_end?: number
-          wave4_start?: number
-          wave5_start?: number
+          wave1_start_time?: string | null
+          wave2_end?: number | null
+          wave2_end_time?: string | null
+          wave2_start?: number | null
+          wave3_end?: number | null
+          wave3_end_time?: string | null
+          wave3_start?: number | null
+          wave4_end?: number | null
+          wave4_end_time?: string | null
+          wave4_start?: number | null
+          wave5_end?: number | null
+          wave5_end_time?: string | null
+          wave5_start?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wave_patterns_symbol_fkey"
+            columns: ["symbol"]
+            isOneToOne: false
+            referencedRelation: "stocks"
+            referencedColumns: ["symbol"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_stocks_with_wave_patterns: {
+        Args: {
+          timeframe: string
+          status: string
+        }
+        Returns: {
+          symbol: string
+          name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

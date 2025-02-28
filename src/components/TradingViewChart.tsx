@@ -55,7 +55,7 @@ const TradingViewChart = ({
         horzLines: { color: "#2c2c2c" },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 450,
+      height: 350,
     });
 
     chartRef.current = chart;
@@ -349,7 +349,7 @@ const TradingViewChart = ({
 
       <div
         ref={chartContainerRef}
-        className="w-full h-[450px] bg-muted rounded-lg overflow-hidden"
+        className="w-full h-[350px] bg-muted rounded-lg overflow-hidden"
       />
     </div>
   );

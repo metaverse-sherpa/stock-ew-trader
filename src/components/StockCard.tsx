@@ -41,15 +41,7 @@ function StockCard({
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !prices?.length) {
-      console.log("Missing requirements:", {
-        hasContainer: !!chartContainerRef.current,
-        pricesLength: prices?.length,
-        timeframe: timeframe,
-        prices: prices,
-      });
-      return;
-    }
+    if (!chartContainerRef.current || !prices?.length) return;
 
     // Filter prices for current timeframe
     const timeframePrices = prices.filter((p) => p.timeframe === timeframe);
@@ -63,105 +55,101 @@ function StockCard({
     // Take the last 50 prices for the mini chart
     const filteredPrices = sortedPrices.slice(-50);
 
-    // Add a small delay to ensure the library is loaded
-    const timer = setTimeout(() => {
-      try {
-        const chart = createChart(chartContainerRef.current!, {
-          layout: {
-            background: { type: ColorType.Solid, color: "transparent" },
-            textColor: "#d1d5db",
-          },
-          grid: {
-            vertLines: { visible: false },
-            horzLines: { visible: false },
-          },
-          width: chartContainerRef.current.clientWidth,
-          height: 120,
-          rightPriceScale: {
-            visible: false,
-          },
-          timeScale: {
-            visible: false,
-          },
-          handleScroll: false,
-          handleScale: false,
-        });
+    // Create chart immediately without delay
+    try {
+      const chart = createChart(chartContainerRef.current!, {
+        layout: {
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#d1d5db",
+        },
+        grid: {
+          vertLines: { visible: false },
+          horzLines: { visible: false },
+        },
+        width: chartContainerRef.current.clientWidth,
+        height: 120,
+        rightPriceScale: {
+          visible: false,
+        },
+        timeScale: {
+          visible: false,
+        },
+        handleScroll: false,
+        handleScale: false,
+      });
 
-        // Add the price area series
-        const areaSeries = chart.addAreaSeries({
-          lineColor: change >= 0 ? "#22c55e" : "#ef4444",
-          topColor:
-            change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
-          bottomColor:
-            change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
-          lineWidth: 2,
-        });
+      // Add the price area series
+      const areaSeries = chart.addAreaSeries({
+        lineColor: change >= 0 ? "#22c55e" : "#ef4444",
+        topColor:
+          change >= 0 ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
+        bottomColor:
+          change >= 0 ? "rgba(34, 197, 94, 0.0)" : "rgba(239, 68, 68, 0.0)",
+        lineWidth: 2,
+      });
 
-        const data = filteredPrices
-          .sort(
-            (a, b) =>
-              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-          )
-          .map((price) => ({
-            time: Math.floor(new Date(price.timestamp).getTime() / 1000),
-            value: price.close,
-          }));
+      const data = filteredPrices
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        )
+        .map((price) => ({
+          time: Math.floor(new Date(price.timestamp).getTime() / 1000),
+          value: price.close,
+        }));
 
-        areaSeries.setData(data);
+      areaSeries.setData(data);
 
-        // Add Elliott Wave lines if we have wave data
-        if (waveStatus?.includes("Wave 5") && data.length > 0) {
-          // Define wave points (simplified for the mini chart)
-          const wavePoints = [
-            { price: price * 0.95 }, // Approximate wave points based on current price
-            { price: price * 0.98 },
-            { price: price * 1.02 },
-            { price: price * 1.0 },
-            { price: price * 1.05 },
-          ];
+      // Add Elliott Wave lines if we have wave data
+      if (waveStatus?.includes("Wave 5") && data.length > 0) {
+        // Define wave points (simplified for the mini chart)
+        const wavePoints = [
+          { price: price * 0.95 }, // Approximate wave points based on current price
+          { price: price * 0.98 },
+          { price: price * 1.02 },
+          { price: price * 1.0 },
+          { price: price * 1.05 },
+        ];
 
-          // Calculate time points
-          const timePoints = [];
-          const numPoints = wavePoints.length;
+        // Calculate time points
+        const timePoints = [];
+        const numPoints = wavePoints.length;
 
-          for (let i = 0; i < numPoints; i++) {
-            const index = Math.min(
-              Math.floor((i / (numPoints - 1)) * (data.length - 1)),
-              data.length - 1,
-            );
-            timePoints.push(data[index].time);
-          }
-
-          // Add a single line series for all waves
-          const waveSeries = chart.addLineSeries({
-            color: "#8b5cf6",
-            lineWidth: 1,
-          });
-
-          // Create connected line data
-          const waveData = wavePoints.map((point, index) => ({
-            time: timePoints[index],
-            value: point.price,
-          }));
-
-          waveSeries.setData(waveData);
+        for (let i = 0; i < numPoints; i++) {
+          const index = Math.min(
+            Math.floor((i / (numPoints - 1)) * (data.length - 1)),
+            data.length - 1,
+          );
+          timePoints.push(data[index].time);
         }
 
-        // Fit the chart content
-        chart.timeScale().fitContent();
+        // Add a single line series for all waves
+        const waveSeries = chart.addLineSeries({
+          color: "#8b5cf6",
+          lineWidth: 1,
+        });
 
-        // Cleanup
-        return () => {
-          chart.remove();
-        };
-      } catch (error) {
-        console.error("Error creating chart:", error);
+        // Create connected line data
+        const waveData = wavePoints.map((point, index) => ({
+          time: timePoints[index],
+          value: point.price,
+        }));
+
+        waveSeries.setData(waveData);
       }
-    }, 100); // 100ms delay
 
-    return () => {
-      clearTimeout(timer);
-    };
+      // Fit the chart content
+      chart.timeScale().fitContent();
+
+      // Cleanup
+      return () => {
+        chart.remove();
+      };
+    } catch (error) {
+      console.error("Error creating chart:", error);
+    }
+
+    return () => {};
   }, [prices, change, timeframe]);
 
   const handleClick = () => {
