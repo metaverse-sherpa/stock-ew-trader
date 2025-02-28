@@ -31,18 +31,18 @@ interface NavigationItem {
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
-  const [selectedWaveStatus, setSelectedWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
+  const [selectedWaveStatus, setSelectedWaveStatus] = useState<ExtendedWaveStatus>("Wave 5");
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
   const [selectedDetailTimeframe, setSelectedDetailTimeframe] = useState<Timeframe>("1d");
-  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<ExtendedWaveStatus>("Wave 5 Bullish");
+  const [selectedDetailWaveStatus, setSelectedDetailWaveStatus] = useState<ExtendedWaveStatus>("Wave 5");
   const [navigationList, setNavigationList] = useState<NavigationItem[]>([]);
   const [error] = useState(null);
   const [currentPage] = useState(1);
   const itemsPerPage = 20;
-  const [ setIsSettingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // Load default timeframe on initial render
   useEffect(() => {
@@ -59,6 +59,20 @@ const Home = () => {
 
   // Update fetchStocks function
   const fetchStocks = async (): Promise<Stock[]> => {
+    // Check for cached data in local storage
+    const cachedData = localStorage.getItem('cachedStocks');
+    const cachedTimestamp = localStorage.getItem('cachedStocksTimestamp');
+
+    if (cachedData && cachedTimestamp) {
+      const now = new Date().getTime();
+      const cacheAge = now - parseInt(cachedTimestamp, 10);
+
+      // If the cache is less than 24 hours old, return the cached data
+      if (cacheAge < 24 * 60 * 60 * 1000) {
+        return JSON.parse(cachedData);
+      }
+    }
+
     try {
       const { data: stocks, error } = await supabase
         .from('stocks')
@@ -123,6 +137,10 @@ const Home = () => {
         })
       );
 
+      // Cache the data in local storage
+      localStorage.setItem('cachedStocks', JSON.stringify(stocksWithPrices));
+      localStorage.setItem('cachedStocksTimestamp', new Date().getTime().toString());
+
       return stocksWithPrices;  
     } catch (err) {
       console.error('Error fetching stocks:', err);
@@ -174,10 +192,15 @@ const Home = () => {
   const { data: stocksData, isLoading: stocksLoading, error: stocksError, refetch } = useQuery({
     queryKey: ['stocks'],
     queryFn: fetchStocks,
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
   const handleRefresh = async () => {
+    // Clear the cache
+    localStorage.removeItem('cachedStocks');
+    localStorage.removeItem('cachedStocksTimestamp');
+
+    // Refetch the data
     await refetch();
   };
 
@@ -254,6 +277,11 @@ const Home = () => {
           onClose={() => setSelectedStock(null)}
         />
       )}
+
+      <Button onClick={handleRefresh} className="fixed bottom-4 right-4">
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Refresh Data
+      </Button>
     </div>
   );
 };

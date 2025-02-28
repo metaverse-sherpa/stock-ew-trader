@@ -102,6 +102,14 @@ const DashboardHeader = ({
           </Label>
         </div>
 
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSettingsClick}
+          className="flex items-center space-x-2"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
       </div>
 
       {isLoading && (
