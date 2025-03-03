@@ -103,7 +103,7 @@ export class StockDataService {
 
   static async seedInitialData(): Promise<void> {
     const initialStocks = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"];
-    const timeframes: Timeframe[] = ["1h", "4h", "1d", "1w"];
+    const timeframes: Timeframe[] = ["1h", "4h", "1d", "1wk", "1mo"];
 
     for (const symbol of initialStocks) {
       for (const timeframe of timeframes) {

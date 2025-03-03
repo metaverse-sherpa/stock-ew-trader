@@ -82,11 +82,12 @@ export class YahooFinanceService {
           volume: quote.volume || 0,
         }));
 
-      // For smaller timeframes, simulate intraday data from daily data
-      if (timeframe === "1wk" || timeframe === "1mo") {
-        // Generate 7 hourly candles per day (market hours)
-        const intradayPrices = [];
+      // Initialize intradayPrices array
+      let intradayPrices: any[] = [];
 
+      // For smaller timeframes, simulate intraday data from daily data
+      if (timeframe === "1wk" || timeframe === "1mo" || timeframe === "1d") {
+        // Generate 7 hourly candles per day (market hours)
         for (const dailyPrice of stockPrices) {
           const date = new Date(dailyPrice.timestamp);
           const range = dailyPrice.high - dailyPrice.low;
@@ -123,28 +124,8 @@ export class YahooFinanceService {
           }
         }
 
-        // For 4h timeframe, aggregate the hourly data
-        if (timeframe === "4h") {
-          stockPrices = [];
-          for (let i = 0; i < intradayPrices.length; i += 4) {
-            const next4h = intradayPrices.slice(i, i + 4);
-            if (next4h.length > 0) {
-              stockPrices.push({
-                symbol,
-                timeframe: "4h",
-                timestamp: next4h[0].timestamp,
-                open: next4h[0].open,
-                high: Math.max(...next4h.map((p) => p.high)),
-                low: Math.min(...next4h.map((p) => p.low)),
-                close: next4h[next4h.length - 1].close,
-                volume: next4h.reduce((sum, p) => sum + p.volume, 0),
-              });
-            }
-          }
-        } else {
-          // Use the hourly data directly
-          stockPrices = intradayPrices;
-        }
+        // Use the hourly data directly
+        stockPrices = intradayPrices;
       }
 
       // Get stock details from Yahoo Finance

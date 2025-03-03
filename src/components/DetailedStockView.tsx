@@ -15,7 +15,7 @@ import { X, Star, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "./ui/use-toast";
 import { useStockDetail } from "@/lib/hooks/useStockDetail";
-import type { Timeframe } from "@/lib/types";
+import type { Timeframe, WaveStatus } from "@/lib/types";
 
 interface DetailedStockViewProps {
   isOpen?: boolean;

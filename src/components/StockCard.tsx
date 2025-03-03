@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { createChart, ColorType } from "lightweight-charts";
+import { createChart, ColorType, Time } from "lightweight-charts";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
@@ -98,7 +98,12 @@ function StockCard({
           value: price.close,
         }));
 
-      areaSeries.setData(data);
+      const chartData = data.map((d) => ({
+        time: d.time as Time,
+        value: d.value,
+      }));
+
+      areaSeries.setData(chartData);
 
       // Add Elliott Wave lines if we have wave data
       if (waveStatus?.includes("Wave 5") && data.length > 0) {

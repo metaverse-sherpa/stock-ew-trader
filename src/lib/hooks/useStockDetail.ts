@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import type { WavePattern, StockPrice, Timeframe } from "../types";
+import type { WavePattern, StockPrice, Timeframe, WaveStatus } from "../types";
 import { globalCache } from "../cache";
 
 export function useStockDetail(
   symbol: string,
   timeframe: Timeframe,
-  waveStatus?: WaveStatus | "all",
+  initialWaveStatus: WaveStatus | "all" = "all"
 ) {
   const [wavePattern, setWavePattern] = useState<WavePattern | null>(null);
   const [prices, setPrices] = useState<StockPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [waveStatus, setWaveStatus] = useState<WaveStatus | "all">(initialWaveStatus);
 
   useEffect(() => {
     console.log("useStockDetail effect running for:", { symbol, timeframe });
@@ -31,8 +32,7 @@ export function useStockDetail(
         return;
       }
       try {
-        const timeframes =
-          timeframe === "all" ? ["1h", "4h", "1d"] : [timeframe];
+        const timeframes = timeframe ? [timeframe] : ["1h", "4h", "1d"];
 
         // Fetch stock details first
         const { data: stockData, error: stockError } = await supabase

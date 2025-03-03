@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import type { Timeframe, WaveStatus, StockPrice } from "../types";
+import type { Timeframe, WaveStatus, StockPrice, WavePattern } from "../types";
 import { generateUUID } from "../utils";
 import { sendEmailNotifications } from "./notificationService";
 
@@ -446,7 +446,8 @@ export class WavePatternService {
         );
         if (invalidated) continue;
 
-        let pattern = {
+        let pattern: WavePattern = {
+          symbol: "",
           wave1_start: pivots[i].price,
           wave1_start_time: pivots[i].timestamp,
           wave1_end: null,

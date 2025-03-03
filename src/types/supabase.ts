@@ -169,6 +169,7 @@ export type Database = {
           confidence: number
           created_at: string | null
           current_price: number
+          exchange: string | null
           id: string
           start_time: string
           status: string
@@ -208,6 +209,7 @@ export type Database = {
           confidence: number
           created_at?: string | null
           current_price: number
+          exchange?: string | null
           id: string
           start_time: string
           status: string
@@ -247,6 +249,7 @@ export type Database = {
           confidence?: number
           created_at?: string | null
           current_price?: number
+          exchange?: string | null
           id?: string
           start_time?: string
           status?: string

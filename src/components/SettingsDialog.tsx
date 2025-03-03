@@ -73,6 +73,10 @@ export function SettingsDialog({
     }
 
     onTimeframeChange?.(value);
+
+    toast({
+      description: "Settings saved successfully!",
+    });
   };
 
   const handleAnalyzeWaves = async () => {
@@ -81,7 +85,6 @@ export function SettingsDialog({
       await WavePatternService.generateAllPatterns((message) => {
         if (toastRef.current) {
           toast({
-            id: toastRef.current,
             title: "Wave Analysis Progress",
             description: message,
           });

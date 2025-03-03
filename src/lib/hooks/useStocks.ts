@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import type { Stock, WavePattern, Timeframe, WaveStatus } from "../types";
 import { globalCache } from "../cache";
+import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 
 export function useStocks(
   selectedTimeframe: Timeframe,
@@ -145,7 +146,7 @@ export function useStocks(
         if (waveStatus === "all") {
           // For "all" waves, get the most recent pattern for each wave status for each stock
           // Group by symbol and status
-          const patternsBySymbolAndStatus = {};
+          const patternsBySymbolAndStatus: Record<string, WavePattern> = {};
 
           wavePatterns.forEach((pattern) => {
             const key = `${pattern.symbol}_${pattern.status}`;
@@ -160,7 +161,7 @@ export function useStocks(
 
           // Convert to array
           stocksWithPatterns = Object.values(patternsBySymbolAndStatus).map(
-            (pattern) => ({
+            (pattern: WavePattern) => ({
               symbol: pattern.symbol,
               exchange: stocksMap[pattern.symbol]?.exchange || "NYSE",
               name: stocksMap[pattern.symbol]?.name || pattern.symbol,
@@ -171,11 +172,11 @@ export function useStocks(
               wave1StartTime: pattern?.wave1_start_time
                 ? new Date(pattern.wave1_start_time).getTime()
                 : 0,
-            }),
+            })
           );
         } else {
           // For specific wave status, get the most recent pattern for each stock
-          const patternsBySymbol = {};
+          const patternsBySymbol: Record<string, WavePattern> = {};
 
           wavePatterns
             .filter((pattern) => pattern.status === waveStatus)
@@ -191,7 +192,7 @@ export function useStocks(
 
           // Convert to array
           stocksWithPatterns = Object.values(patternsBySymbol).map(
-            (pattern) => ({
+            (pattern: WavePattern) => ({
               symbol: pattern.symbol,
               exchange: stocksMap[pattern.symbol]?.exchange || "NYSE",
               name: stocksMap[pattern.symbol]?.name || pattern.symbol,
@@ -202,7 +203,7 @@ export function useStocks(
               wave1StartTime: pattern?.wave1_start_time
                 ? new Date(pattern.wave1_start_time).getTime()
                 : 0,
-            }),
+            })
           );
         }
 
@@ -226,8 +227,8 @@ export function useStocks(
     // Set up real-time subscription
     const subscription = supabase
       .channel("wave_patterns_changes")
-      .on(
-        "postgres_changes",
+      .on<RealtimePostgresChangesPayload<WavePattern>>(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: "*",
           schema: "public",
@@ -238,20 +239,21 @@ export function useStocks(
           // Update the stocks list when wave patterns change
           setStocks((current) => {
             const updated = [...current];
+            const newPattern = payload.new as WavePattern;
             const index = updated.findIndex(
-              (s) => s.symbol === payload.new.symbol,
+              (s) => s.symbol === newPattern.symbol,
             );
 
             // Only update if the status matches our filter
             if (
               index >= 0 &&
-              (waveStatus === "all" || payload.new.status === waveStatus)
+              (waveStatus === "all" || newPattern.status === waveStatus)
             ) {
               updated[index] = {
                 ...updated[index],
-                wavePattern: payload.new as WavePattern,
+                wavePattern: newPattern,
               };
-            } else if (waveStatus === payload.new.status) {
+            } else if (waveStatus === newPattern.status) {
               // This is a new stock that matches our filter, we should refresh the data
               // Clear cache to force a refresh on next render
               const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}`;

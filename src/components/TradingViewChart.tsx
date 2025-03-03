@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { createChart, ColorType } from "lightweight-charts";
+import { createChart, ColorType, Time } from "lightweight-charts";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { WavePattern, StockPrice, Timeframe } from "@/lib/types";
@@ -73,14 +73,14 @@ const TradingViewChart = ({
     const priceData = [...prices]
       .filter((price) => price.timeframe === timeframe)
       .map((price) => ({
-        time: Math.floor(new Date(price.timestamp).getTime() / 1000),
+        time: Math.floor(new Date(price.timestamp).getTime() / 1000) as Time,
         open: price.open,
         high: price.high,
         low: price.low,
         close: price.close,
         volume: price.volume,
       }))
-      .sort((a, b) => a.time - b.time);
+      .sort((a, b) => (a.time as number) - (b.time as number));
 
     // If we have a wave pattern, ensure we show enough data before wave 1
     if (wavePattern) {
@@ -90,7 +90,7 @@ const TradingViewChart = ({
       // For 1h and 4h show more pre-wave data
       const preWaveDays = timeframe === "1d" ? 30 : 90;
       const minDataTime = wave1StartTime - 86400 * preWaveDays;
-      const filteredPriceData = priceData.filter((p) => p.time >= minDataTime);
+      const filteredPriceData = priceData.filter((p) => (p.time as number) >= minDataTime);
       candlestickSeries.setData(filteredPriceData);
     } else {
       candlestickSeries.setData(priceData);
@@ -108,56 +108,54 @@ const TradingViewChart = ({
       // Create wave points
       const wavePoints = [
         {
-          time: Math.floor(
-            new Date(wavePattern.wave1_start_time).getTime() / 1000,
-          ),
+          time: Math.floor(new Date(wavePattern.wave1_start_time).getTime() / 1000) as Time,
           value: wavePattern.wave1_start,
         },
         {
           time: Math.floor(
             new Date(wavePattern.wave1_end_time).getTime() / 1000,
-          ),
+          ) as Time,
           value: wavePattern.wave1_end,
         },
         {
           time: Math.floor(
             new Date(wavePattern.wave2_end_time).getTime() / 1000,
-          ),
+          ) as Time,
           value: wavePattern.wave2_end,
         },
         {
           time: Math.floor(
             new Date(wavePattern.wave3_end_time).getTime() / 1000,
-          ),
+          ) as Time,
           value: wavePattern.wave3_end,
         },
         {
           time: Math.floor(
             new Date(wavePattern.wave4_end_time).getTime() / 1000,
-          ),
+          ) as Time,
           value: wavePattern.wave4_end,
         },
       ]
         .filter(
           (point) =>
-            !isNaN(point.time) &&
+            !isNaN(point.time as number) &&
             point.value !== null &&
             point.value !== undefined &&
             !isNaN(point.value),
         )
-        .sort((a, b) => a.time - b.time);
+        .sort((a, b) => (a.time as number) - (b.time as number));
 
       // Add Wave 5 point if available
       if (wavePattern.wave5_end && wavePattern.wave5_end_time) {
         const time = Math.floor(
           new Date(wavePattern.wave5_end_time).getTime() / 1000,
-        );
-        if (!isNaN(time) && !isNaN(wavePattern.wave5_end)) {
+        ) as Time;
+        if (!isNaN(time as number) && !isNaN(wavePattern.wave5_end)) {
           wavePoints.push({
             time,
             value: wavePattern.wave5_end,
           });
-          wavePoints.sort((a, b) => a.time - b.time);
+          wavePoints.sort((a, b) => (a.time as number) - (b.time as number));
         }
       }
 
@@ -226,22 +224,17 @@ const TradingViewChart = ({
         });
 
         // Add a single data point for this label
-        labelSeries.setData([{ time: markerTime, value: price }]);
+        labelSeries.setData([{ time: markerTime as Time, value: price }]);
 
         // Add the marker
         labelSeries.setMarkers([
           {
-            time: markerTime,
+            time: markerTime as Time,
             position: isBullish ? "aboveBar" : "belowBar",
             color: "#ffffff",
             shape: "circle",
             text,
             size: 1,
-            textColor: "#ffffff",
-            backgroundColor: "#8b5cf6",
-            borderColor: "#8b5cf6",
-            borderWidth: 1,
-            fontSize: 12,
           },
         ]);
 
@@ -302,8 +295,8 @@ const TradingViewChart = ({
           const endTimeSeconds = startTimeSeconds + 86400 * projectionDays;
 
           projectionLine.setData([
-            { time: startTimeSeconds, value: startPrice },
-            { time: endTimeSeconds, value: price },
+            { time: startTimeSeconds as Time, value: startPrice },
+            { time: endTimeSeconds as Time, value: price },
           ]);
 
           waveSeriesRef.current.push(projectionLine);
