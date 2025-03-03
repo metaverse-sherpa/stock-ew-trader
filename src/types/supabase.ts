@@ -101,24 +101,66 @@ export type Database = {
         }
         Relationships: []
       }
+      user_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string | null
+          notifications_enabled: boolean | null
+          symbol: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          notifications_enabled?: boolean | null
+          symbol: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          notifications_enabled?: boolean | null
+          symbol?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           created_at: string | null
           default_timeframe: string
+          email: string | null
+          email_subscribed: boolean | null
           id: string
           updated_at: string | null
+          user_id: string | null
+          wave_alerts_enabled: boolean | null
         }
         Insert: {
           created_at?: string | null
           default_timeframe?: string
+          email?: string | null
+          email_subscribed?: boolean | null
           id?: string
           updated_at?: string | null
+          user_id?: string | null
+          wave_alerts_enabled?: boolean | null
         }
         Update: {
           created_at?: string | null
           default_timeframe?: string
+          email?: string | null
+          email_subscribed?: boolean | null
           id?: string
           updated_at?: string | null
+          user_id?: string | null
+          wave_alerts_enabled?: boolean | null
         }
         Relationships: []
       }
@@ -255,6 +297,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_new_wave5_patterns: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_stocks_with_wave_patterns: {
         Args: {
           timeframe: string

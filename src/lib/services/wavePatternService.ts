@@ -1,9 +1,13 @@
 import { supabase } from "../supabase";
 import type { Timeframe, WaveStatus, StockPrice } from "../types";
 import { generateUUID } from "../utils";
+import { sendEmailNotifications } from "./notificationService";
 
 export class WavePatternService {
-  static async generateAllPatterns(onProgress?: (message: string) => void) {
+  static async generateAllPatterns(
+    onProgress?: (message: string) => void,
+    sendNotifications = true,
+  ) {
     console.log("Starting pattern generation...");
     try {
       onProgress?.("Fetching stocks...");
@@ -132,6 +136,15 @@ export class WavePatternService {
 
             console.log(`Successfully stored pattern for ${stock.symbol}`);
           }
+        }
+      }
+
+      // Send email notifications for new Wave 5 patterns if enabled
+      if (sendNotifications) {
+        try {
+          await this.sendWave5Notifications();
+        } catch (notificationError) {
+          console.error("Error sending notifications:", notificationError);
         }
       }
     } catch (error) {
@@ -333,6 +346,76 @@ export class WavePatternService {
     if (wave5Move > wave1Size * 2.618) return false;
 
     return true;
+  }
+
+  static async sendWave5Notifications() {
+    try {
+      // Get user settings to check if notifications are enabled
+      const { data: settings } = await supabase
+        .from("user_settings")
+        .select("*")
+        .eq("wave_alerts_enabled", true)
+        .not("email", "is", null);
+
+      if (!settings?.length) {
+        console.log("No users with wave alerts enabled");
+        return;
+      }
+
+      // Get new Wave 5 patterns from the last week
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { data: newPatterns } = await supabase
+        .from("wave_patterns")
+        .select("symbol, status, created_at, confidence")
+        .eq("status", "Wave 5 Bullish")
+        .gte("created_at", oneWeekAgo.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (!newPatterns?.length) {
+        console.log("No new Wave 5 patterns found");
+        return;
+      }
+
+      // Get user favorites to personalize notifications
+      const { data: favorites } = await supabase
+        .from("user_favorites")
+        .select("*")
+        .eq("notifications_enabled", true);
+
+      const favoriteSymbols = favorites?.map((fav) => fav.symbol) || [];
+
+      // Filter patterns to prioritize favorites
+      const prioritizedPatterns = newPatterns.sort((a, b) => {
+        // First sort by favorite status
+        const aIsFavorite = favoriteSymbols.includes(a.symbol);
+        const bIsFavorite = favoriteSymbols.includes(b.symbol);
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+
+        // Then by confidence
+        return b.confidence - a.confidence;
+      });
+
+      // Limit to top 10 patterns to avoid overwhelming users
+      const topPatterns = prioritizedPatterns.slice(0, 10);
+
+      // Send email notifications
+      for (const user of settings) {
+        await sendEmailNotifications({
+          email: user.email,
+          subject: "New Wave 5 Patterns Detected",
+          patterns: topPatterns,
+          favorites: favoriteSymbols,
+        });
+      }
+
+      console.log(`Sent Wave 5 notifications to ${settings.length} users`);
+    } catch (error) {
+      console.error("Error sending Wave 5 notifications:", error);
+      throw error;
+    }
   }
 
   private static findElliottWavePatterns(

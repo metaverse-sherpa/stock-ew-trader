@@ -6,12 +6,14 @@ import StockGrid from "./StockGrid";
 import { LoadingDialog } from "./LoadingDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { Button } from "./ui/button";
-import { Settings } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "./auth/AuthProvider";
 import type { Timeframe, WaveStatus } from "@/lib/types";
 
 const Home = () => {
   const { isDarkMode, setIsDarkMode } = useTheme();
+  const { signOut, user } = useAuth();
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("1d");
   const [selectedWaveStatus, setSelectedWaveStatus] = useState<
     WaveStatus | "all"
@@ -51,14 +53,29 @@ const Home = () => {
         selectedTimeframe={selectedTimeframe}
         selectedWaveStatus={selectedWaveStatus}
       >
-        <SettingsDialog
-          onTimeframeChange={handleTimeframeChange}
-          trigger={
-            <Button variant="outline" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-          }
-        />
+        <div className="flex items-center space-x-2">
+          <SettingsDialog
+            onTimeframeChange={handleTimeframeChange}
+            trigger={
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            }
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={signOut}
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+          {user?.email && (
+            <span className="text-sm text-muted-foreground hidden md:inline-block">
+              {user.email}
+            </span>
+          )}
+        </div>
       </DashboardHeader>
 
       <LoadingDialog isOpen={isLoading} />

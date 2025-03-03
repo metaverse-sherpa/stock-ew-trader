@@ -19,10 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { Settings, RefreshCw } from "lucide-react";
 import { WavePatternService } from "@/lib/services/wavePatternService";
 import { supabase } from "@/lib/supabase";
 import type { Timeframe } from "@/lib/types";
+import EmailSettings from "./EmailSettings";
 
 interface SettingsDialogProps {
   onTimeframeChange?: (timeframe: Timeframe) => void;
@@ -120,100 +122,111 @@ export function SettingsDialog({
             Configure wave analysis and other settings
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Default Timeframe</Label>
-              <p className="text-sm text-muted-foreground">
-                Select your preferred default timeframe
-              </p>
-            </div>
-            <Select
-              value={defaultTimeframe}
-              onValueChange={handleTimeframeChange}
-            >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="Select timeframe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1d">1d</SelectItem>
-                <SelectItem value="1wk">1wk</SelectItem>
-                <SelectItem value="1mo">1mo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Automatic Wave Analysis</Label>
-              <p className="text-sm text-muted-foreground">
-                Run wave analysis daily at midnight
-              </p>
-            </div>
-            <Switch
-              checked={autoAnalysis}
-              onCheckedChange={handleAutoAnalysisChange}
-            />
-          </div>
+        <Tabs defaultValue="general">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          </TabsList>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Manual Wave Analysis</Label>
-              <p className="text-sm text-muted-foreground">
-                Analyze current price data for wave patterns
-              </p>
+          <TabsContent value="general" className="space-y-6 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Default Timeframe</Label>
+                <p className="text-sm text-muted-foreground">
+                  Select your preferred default timeframe
+                </p>
+              </div>
+              <Select
+                value={defaultTimeframe}
+                onValueChange={handleTimeframeChange}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="Select timeframe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1d">1d</SelectItem>
+                  <SelectItem value="1wk">1wk</SelectItem>
+                  <SelectItem value="1mo">1mo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAnalyzeWaves}
-              disabled={isAnalyzing}
-            >
-              {isAnalyzing ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              {isAnalyzing ? "Analyzing..." : "Analyze Now"}
-            </Button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Supabase Configuration</Label>
-              <p className="text-sm text-muted-foreground">
-                Connect to a different Supabase database
-              </p>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Automatic Wave Analysis</Label>
+                <p className="text-sm text-muted-foreground">
+                  Run wave analysis daily at midnight
+                </p>
+              </div>
+              <Switch
+                checked={autoAnalysis}
+                onCheckedChange={handleAutoAnalysisChange}
+              />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsOpen(false);
-                window.location.href = "/supabase-config";
-              }}
-            >
-              Configure
-            </Button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Clear Cache</Label>
-              <p className="text-sm text-muted-foreground">
-                Clear cached data to fetch fresh data from the server
-              </p>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Manual Wave Analysis</Label>
+                <p className="text-sm text-muted-foreground">
+                  Analyze current price data for wave patterns
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAnalyzeWaves}
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                {isAnalyzing ? "Analyzing..." : "Analyze Now"}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                globalCache.clear();
-                toast({
-                  title: "Cache Cleared",
-                  description: "All cached data has been cleared.",
-                });
-              }}
-            >
-              Clear Cache
-            </Button>
-          </div>
-        </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Supabase Configuration</Label>
+                <p className="text-sm text-muted-foreground">
+                  Connect to a different Supabase database
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsOpen(false);
+                  window.location.href = "/supabase-config";
+                }}
+              >
+                Configure
+              </Button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Clear Cache</Label>
+                <p className="text-sm text-muted-foreground">
+                  Clear cached data to fetch fresh data from the server
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  globalCache.clear();
+                  toast({
+                    title: "Cache Cleared",
+                    description: "All cached data has been cleared.",
+                  });
+                }}
+              >
+                Clear Cache
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="pt-4">
+            <EmailSettings />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
