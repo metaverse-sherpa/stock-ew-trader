@@ -31,7 +31,7 @@ interface SettingsDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function SettingsDialog({
+export default function SettingsDialog({
   onTimeframeChange,
   trigger,
 }: SettingsDialogProps = {}) {

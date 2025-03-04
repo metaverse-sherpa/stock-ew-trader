@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabase";
 import type { Stock, WavePattern, Timeframe, WaveStatus } from "../types";
 import { globalCache } from "../cache";
 import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
+
+const INITIAL_BATCH_SIZE = 10;
+const SUBSEQUENT_BATCH_SIZE = 20;
 
 export function useStocks(
   selectedTimeframe: Timeframe,
@@ -28,203 +31,186 @@ export function useStocks(
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    // Remove unnecessary console.log
-    const fetchStocks = async () => {
-      // Check cache first
-      const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}`;
-      const cachedData =
-        globalCache.get<
-          (Stock & { wavePattern: WavePattern | null; prices: any[] })[]
-        >(cacheKey);
+  const fetchStocksProgressively = useCallback(async (pageNumber: number) => {
+    const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}_${pageNumber}`;
+    const cachedData = globalCache.get<(Stock & { wavePattern: WavePattern | null; prices: any[] })[]>(cacheKey);
 
-      if (cachedData) {
-        console.log("Using cached stock data");
-        setStocks(cachedData);
-        setLoading(false);
+    if (cachedData) {
+      setStocks(prev => [...prev, ...cachedData]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Calculate offset based on page number
+      const offset = pageNumber * (pageNumber === 0 ? INITIAL_BATCH_SIZE : SUBSEQUENT_BATCH_SIZE);
+      const limit = pageNumber === 0 ? INITIAL_BATCH_SIZE : SUBSEQUENT_BATCH_SIZE;
+
+      // First get stocks with pagination
+      const { data: stocksData, error: stocksError } = await supabase
+        .from("stocks")
+        .select("*")
+        .range(offset, offset + limit - 1);
+
+      if (stocksError) throw stocksError;
+      if (!stocksData?.length) {
+        setHasMore(false);
         return;
       }
-      try {
-        // First get wave patterns with stocks
-        // Fetch wave patterns for all timeframes
-        // First get all stocks
-        const { data: stocks, error: stocksError } = await supabase
-          .from("stocks")
-          .select("*");
 
-        if (stocksError) throw stocksError;
-        if (!stocks?.length) {
-          setStocks([]);
-          return;
-        }
+      // Get wave patterns for these stocks
+      const { data: wavePatterns, error: waveError } = await supabase
+        .from("wave_patterns")
+        .select("*")
+        .in("symbol", stocksData.map(s => s.symbol))
+        .eq("timeframe", selectedTimeframe)
+        .order("confidence", { ascending: false });
 
-        // Get all wave patterns for the selected timeframe
-        const { data: wavePatterns, error: waveError } = await supabase
-          .from("wave_patterns")
-          .select("*")
-          .in("timeframe", timeframes)
-          .order("confidence", { ascending: false });
+      if (waveError) throw waveError;
 
-        if (waveError) throw waveError;
-        if (!wavePatterns?.length) {
-          setStocks([]);
-          return;
-        }
+      // Create a map of stocks for easy lookup
+      const stocksMap = Object.fromEntries(
+        stocksData.map((stock) => [stock.symbol, stock])
+      );
 
-        // Create a map of stocks for easy lookup
-        const stocksMap = Object.fromEntries(
-          stocks.map((stock) => [stock.symbol, stock]),
-        );
+      // Create a map to store prices for each symbol
+      const stockPrices: Record<string, any[]> = {};
 
-        // Create a map to store prices for each symbol
-        const stockPrices = {};
+      // Fetch prices for all symbols in parallel
+      await Promise.all(
+        stocksData.map(async (stock) => {
+          const cacheKey = `${stock.symbol}_${selectedTimeframe}`;
 
-        // Get unique symbols from wave patterns to reduce database queries
-        const uniqueSymbols = [
-          ...new Set(wavePatterns.map((pattern) => pattern.symbol)),
-        ];
+          if (priceCache[cacheKey]) {
+            stockPrices[stock.symbol] = priceCache[cacheKey];
+            return;
+          }
 
-        // Fetch prices for all symbols in parallel instead of sequentially
-        await Promise.all(
-          uniqueSymbols.map(async (symbol) => {
-            const cacheKey = `${symbol}_${selectedTimeframe}`;
+          const { data, error } = await supabase
+            .from("stock_prices")
+            .select()
+            .eq("symbol", stock.symbol)
+            .eq("timeframe", selectedTimeframe)
+            .order("timestamp", { ascending: true })
+            .limit(100);
 
-            // Use cached data if available
-            if (priceCache[cacheKey]) {
-              stockPrices[symbol] = priceCache[cacheKey];
-              return; // Use return instead of continue in async callback
-            }
+          if (error) throw error;
 
-            const { data, error } = await supabase
-              .from("stock_prices")
-              .select()
-              .eq("symbol", symbol)
-              .eq("timeframe", selectedTimeframe)
-              .order("timestamp", { ascending: true })
-              .limit(100);
+          const prices = data?.map((price) => ({
+            ...price,
+            timeframe: price.timeframe,
+          })) || [];
 
-            if (error) throw error;
+          setPriceCache(prev => ({
+            ...prev,
+            [cacheKey]: prices,
+          }));
 
-            const prices =
-              data?.map((price) => ({
-                ...price,
-                timeframe: price.timeframe,
-              })) || [];
+          globalCache.set(`_prices_${cacheKey}`, prices);
+          stockPrices[stock.symbol] = prices;
+        })
+      );
 
-            // Update both local and global cache
-            setPriceCache((prev) => ({
-              ...prev,
-              [cacheKey]: prices,
-            }));
+      // Transform the data
+      const patternsBySymbol = wavePatterns?.reduce(
+        (acc, pattern) => {
+          if (!acc[pattern.symbol]) {
+            acc[pattern.symbol] = {};
+          }
+          acc[pattern.symbol][pattern.timeframe] = pattern;
+          return acc;
+        },
+        {} as Record<string, Record<Timeframe, any>>
+      );
 
-            // Store in global cache with a specific prefix
-            globalCache.set(`_prices_${cacheKey}`, prices);
+      let stocksWithPatterns = [];
 
-            stockPrices[symbol] = prices;
-          }),
-        );
+      if (waveStatus === "all") {
+        // For "all" waves, get the most recent pattern for each wave status
+        const patternsBySymbolAndStatus: Record<string, WavePattern> = {};
 
-        // stockPrices is now populated from the batch queries above
+        wavePatterns?.forEach((pattern) => {
+          const key = `${pattern.symbol}_${pattern.status}`;
+          if (
+            !patternsBySymbolAndStatus[key] ||
+            new Date(pattern.wave1_start_time) >
+              new Date(patternsBySymbolAndStatus[key].wave1_start_time)
+          ) {
+            patternsBySymbolAndStatus[key] = pattern;
+          }
+        });
 
-        // Transform the data
-        // Group patterns by symbol
-        const patternsBySymbol = wavePatterns.reduce(
-          (acc, pattern) => {
-            if (!acc[pattern.symbol]) {
-              acc[pattern.symbol] = {};
-            }
-            acc[pattern.symbol][pattern.timeframe] = pattern;
-            return acc;
-          },
-          {} as Record<string, Record<Timeframe, any>>,
-        );
-
-        // For specific wave status, get the most recent pattern for each stock
-        let stocksWithPatterns = [];
-
-        if (waveStatus === "all") {
-          // For "all" waves, get the most recent pattern for each wave status for each stock
-          // Group by symbol and status
-          const patternsBySymbolAndStatus: Record<string, WavePattern> = {};
-
-          wavePatterns.forEach((pattern) => {
-            const key = `${pattern.symbol}_${pattern.status}`;
-            if (
-              !patternsBySymbolAndStatus[key] ||
-              new Date(pattern.wave1_start_time) >
-                new Date(patternsBySymbolAndStatus[key].wave1_start_time)
-            ) {
-              patternsBySymbolAndStatus[key] = pattern;
-            }
-          });
-
-          // Convert to array
-          stocksWithPatterns = Object.values(patternsBySymbolAndStatus).map(
-            (pattern: WavePattern) => ({
-              symbol: pattern.symbol,
-              exchange: stocksMap[pattern.symbol]?.exchange || "NYSE",
-              name: stocksMap[pattern.symbol]?.name || pattern.symbol,
-              created_at: stocksMap[pattern.symbol]?.created_at,
-              updated_at: stocksMap[pattern.symbol]?.updated_at,
+        stocksWithPatterns = Object.values(patternsBySymbolAndStatus)
+          .filter(pattern => stocksMap[pattern.symbol])
+          .map((pattern) => ({
+            ...stocksMap[pattern.symbol],
+            wavePattern: pattern,
+            prices: stockPrices[pattern.symbol] || [],
+            wave1StartTime: pattern?.wave1_start_time
+              ? new Date(pattern.wave1_start_time).getTime()
+              : 0,
+          }));
+      } else {
+        // For specific wave status
+        stocksWithPatterns = stocksData
+          .map(stock => {
+            const pattern = patternsBySymbol?.[stock.symbol]?.[selectedTimeframe];
+            if (!pattern || pattern.status !== waveStatus) return null;
+            
+            return {
+              ...stock,
               wavePattern: pattern,
-              prices: stockPrices[pattern.symbol] || [],
+              prices: stockPrices[stock.symbol] || [],
               wave1StartTime: pattern?.wave1_start_time
                 ? new Date(pattern.wave1_start_time).getTime()
                 : 0,
-            })
-          );
-        } else {
-          // For specific wave status, get the most recent pattern for each stock
-          const patternsBySymbol: Record<string, WavePattern> = {};
-
-          wavePatterns
-            .filter((pattern) => pattern.status === waveStatus)
-            .forEach((pattern) => {
-              if (
-                !patternsBySymbol[pattern.symbol] ||
-                new Date(pattern.wave1_start_time) >
-                  new Date(patternsBySymbol[pattern.symbol].wave1_start_time)
-              ) {
-                patternsBySymbol[pattern.symbol] = pattern;
-              }
-            });
-
-          // Convert to array
-          stocksWithPatterns = Object.values(patternsBySymbol).map(
-            (pattern: WavePattern) => ({
-              symbol: pattern.symbol,
-              exchange: stocksMap[pattern.symbol]?.exchange || "NYSE",
-              name: stocksMap[pattern.symbol]?.name || pattern.symbol,
-              created_at: stocksMap[pattern.symbol]?.created_at,
-              updated_at: stocksMap[pattern.symbol]?.updated_at,
-              wavePattern: pattern,
-              prices: stockPrices[pattern.symbol] || [],
-              wave1StartTime: pattern?.wave1_start_time
-                ? new Date(pattern.wave1_start_time).getTime()
-                : 0,
-            })
-          );
-        }
-
-        // Sort by wave1_start_time desc (most recent first)
-        stocksWithPatterns.sort((a, b) => b.wave1StartTime - a.wave1StartTime);
-
-        // Store in cache
-        globalCache.set(cacheKey, stocksWithPatterns);
-        setStocks(stocksWithPatterns);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error("Failed to fetch stocks"),
-        );
-      } finally {
-        setLoading(false);
+            };
+          })
+          .filter(Boolean);
       }
-    };
 
-    fetchStocks();
+      // Sort by wave1_start_time desc (most recent first)
+      stocksWithPatterns.sort((a, b) => b.wave1StartTime - a.wave1StartTime);
 
-    // Set up real-time subscription
+      // Store in cache
+      globalCache.set(cacheKey, stocksWithPatterns);
+      
+      // Update state
+      setStocks(prev => [...prev, ...stocksWithPatterns]);
+      setHasMore(stocksWithPatterns.length === limit);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error("Failed to fetch stocks"));
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedTimeframe, waveStatus, priceCache]);
+
+  // Load more function
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      setPage(p => p + 1);
+    }
+  }, [loading, hasMore]);
+
+  useEffect(() => {
+    // Reset state when timeframe or wave status changes
+    setStocks([]);
+    setPage(0);
+    setHasMore(true);
+    fetchStocksProgressively(0);
+  }, [selectedTimeframe, waveStatus, fetchStocksProgressively]);
+
+  useEffect(() => {
+    if (page > 0) {
+      fetchStocksProgressively(page);
+    }
+  }, [page, fetchStocksProgressively]);
+
+  // Set up real-time subscription
+  useEffect(() => {
     const subscription = supabase
       .channel("wave_patterns_changes")
       .on<RealtimePostgresChangesPayload<WavePattern>>(
@@ -236,33 +222,31 @@ export function useStocks(
           filter: `timeframe=eq.${selectedTimeframe}`,
         },
         (payload) => {
-          // Update the stocks list when wave patterns change
           setStocks((current) => {
             const updated = [...current];
             const newPattern = payload.new as WavePattern;
             const index = updated.findIndex(
-              (s) => s.symbol === newPattern.symbol,
+              (s) => s.symbol === newPattern.symbol
             );
 
-            // Only update if the status matches our filter
-            if (
-              index >= 0 &&
-              (waveStatus === "all" || newPattern.status === waveStatus)
-            ) {
+            if (index >= 0 && (waveStatus === "all" || newPattern.status === waveStatus)) {
               updated[index] = {
                 ...updated[index],
                 wavePattern: newPattern,
               };
             } else if (waveStatus === newPattern.status) {
-              // This is a new stock that matches our filter, we should refresh the data
               // Clear cache to force a refresh on next render
-              const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}`;
+              const cacheKey = `stocks_${selectedTimeframe}_${waveStatus}_0`;
               globalCache.delete(cacheKey);
+              // Reset pagination and reload
+              setStocks([]);
+              setPage(0);
+              setHasMore(true);
             }
 
             return updated;
           });
-        },
+        }
       )
       .subscribe();
 
@@ -271,5 +255,5 @@ export function useStocks(
     };
   }, [selectedTimeframe, waveStatus]);
 
-  return { stocks, loading, error };
+  return { stocks, loading, error, hasMore, loadMore };
 }

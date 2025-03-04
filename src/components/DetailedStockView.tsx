@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,9 +6,6 @@ import {
   DialogDescription,
   DialogClose,
 } from "./ui/dialog";
-import TradingViewChart from "./TradingViewChart";
-import AIPredictions from "./AIPredictions";
-import StockSentiment from "./StockSentiment";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { X, Star, Bell } from "lucide-react";
@@ -28,6 +25,18 @@ interface DetailedStockViewProps {
   nextStock?: string;
   selectedWaveStatus?: WaveStatus | "all";
 }
+
+const TradingViewChart = lazy(() => import('./TradingViewChart' /* webpackChunkName: "trading-view" */));
+const AIPredictions = lazy(() => import('./AIPredictions' /* webpackChunkName: "ai-predictions" */));
+const StockSentiment = lazy(() => import('./StockSentiment' /* webpackChunkName: "stock-sentiment" */));
+
+// Add preload function
+const preloadComponents = () => {
+  const components = ['./TradingViewChart', './AIPredictions', './StockSentiment'];
+  components.forEach(comp => {
+    import(comp);
+  });
+};
 
 const DetailedStockView = ({
   isOpen = true,
@@ -80,6 +89,7 @@ const DetailedStockView = ({
 
     if (symbol) {
       checkFavoriteStatus();
+      preloadComponents(); // Add preload call
     }
   }, [symbol]);
 
@@ -238,42 +248,48 @@ const DetailedStockView = ({
           </div>
         ) : (
           <div className="space-y-6">
-            <TradingViewChart
-              symbol={symbol}
-              timeframe={timeframe}
-              onTimeframeChange={onTimeframeChange}
-              prices={prices}
-              wavePattern={wavePattern}
-              showElliottWave={showElliottWave}
-              showFibonacci={showFibonacci}
-              onToggleElliottWave={setShowElliottWave}
-              onToggleFibonacci={setShowFibonacci}
-            />
+            <Suspense fallback={<div className="h-[350px] bg-muted rounded-lg animate-pulse" />}>
+              <TradingViewChart
+                symbol={symbol}
+                timeframe={timeframe}
+                onTimeframeChange={onTimeframeChange}
+                prices={prices}
+                wavePattern={wavePattern}
+                showElliottWave={showElliottWave}
+                showFibonacci={showFibonacci}
+                onToggleElliottWave={setShowElliottWave}
+                onToggleFibonacci={setShowFibonacci}
+              />
+            </Suspense>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
               {wavePattern && (
-                <AIPredictions
-                  currentPrice={wavePattern.current_price}
-                  wavePattern={wavePattern}
-                  targets={[
-                    {
-                      price: wavePattern.target_price1,
-                      confidence: wavePattern.confidence,
-                      type: "resistance",
-                    },
-                    {
-                      price: wavePattern.target_price2,
-                      confidence: Math.max(wavePattern.confidence - 10, 0),
-                      type: "resistance",
-                    },
-                    {
-                      price: wavePattern.target_price3,
-                      confidence: Math.max(wavePattern.confidence - 20, 0),
-                      type: "resistance",
-                    },
-                  ]}
-                />
+                <Suspense fallback={<div className="h-[100px] bg-muted rounded-lg animate-pulse" />}>
+                  <AIPredictions
+                    currentPrice={wavePattern.current_price}
+                    wavePattern={wavePattern}
+                    targets={[
+                      {
+                        price: wavePattern.target_price1,
+                        confidence: wavePattern.confidence,
+                        type: "resistance",
+                      },
+                      {
+                        price: wavePattern.target_price2,
+                        confidence: Math.max(wavePattern.confidence - 10, 0),
+                        type: "resistance",
+                      },
+                      {
+                        price: wavePattern.target_price3,
+                        confidence: Math.max(wavePattern.confidence - 20, 0),
+                        type: "resistance",
+                      },
+                    ]}
+                  />
+                </Suspense>
               )}
-              <StockSentiment symbol={symbol} />
+              <Suspense fallback={<div className="h-[100px] bg-muted rounded-lg animate-pulse" />}>
+                <StockSentiment symbol={symbol} />
+              </Suspense>
             </div>
           </div>
         )}

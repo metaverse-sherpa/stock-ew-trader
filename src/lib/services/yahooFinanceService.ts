@@ -1,4 +1,3 @@
-import yahooFinance from "yahoo-finance2";
 import { supabase } from "../supabase";
 import { sleep } from "../utils";
 import type { Timeframe } from "../types";
@@ -16,7 +15,8 @@ export class YahooFinanceService {
           await sleep(2000 * i); // Exponential backoff
         }
 
-        const result = await yahooFinance.historical(symbol, {
+        const yahooFinance = await import("yahoo-finance2");
+        const result = await yahooFinance.default.historical(symbol, {
           ...options,
           fetchOptions: {
             headers: {
@@ -46,8 +46,9 @@ export class YahooFinanceService {
         `Fetching ${timeframe} data for ${symbol} from Yahoo Finance...`,
       );
 
+      const yahooFinance = await import("yahoo-finance2");
       // Suppress the deprecation notice
-      yahooFinance.suppressNotices(["ripHistorical"]);
+      yahooFinance.default.suppressNotices(["ripHistorical"]);
 
       const result = await this.fetchWithRetry(symbol, {
         period1: startDate,
@@ -129,7 +130,7 @@ export class YahooFinanceService {
       }
 
       // Get stock details from Yahoo Finance
-      const stockDetails = await yahooFinance.quote(symbol);
+      const stockDetails = await yahooFinance.default.quote(symbol);
 
       // First ensure the stock exists with updated details
       await supabase.from("stocks").upsert({

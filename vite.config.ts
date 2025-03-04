@@ -33,5 +33,24 @@ export default defineConfig({
     allowedHosts: true,
     port: 3002,
     host: true
+  },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-charts': ['lightweight-charts'],
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-label',
+            '@radix-ui/react-select'
+          ],
+          'vendor-supabase': ['@supabase/supabase-js']
+        }
+      }
+    }
   }
 });
